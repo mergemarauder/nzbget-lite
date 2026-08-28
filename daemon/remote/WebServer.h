@@ -25,8 +25,6 @@
 #include "NString.h"
 #include "Connection.h"
 
-inline constexpr int TOKEN_SIZE = 48 + 1;
-
 class WebProcessor
 {
 public:
@@ -37,7 +35,6 @@ public:
 		hmOptions
 	};
 
-	static void Init();
 	void Execute();
 	void SetConnection(Connection* connection) { m_connection = connection; }
 	void SetUrl(const char* url) { m_url = url; }
@@ -63,8 +60,6 @@ private:
 	CString m_origin;
 	int m_contentLen;
 	char m_authInfo[256+1];
-	char m_authToken[TOKEN_SIZE];
-	static char m_serverAuthToken[3][TOKEN_SIZE];
 	CString m_forwardedFor;
 	CString m_oldETag;
 	bool m_keepAlive = false;

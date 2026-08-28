@@ -64,7 +64,6 @@ public:
 		const char* category,
 		CategorySource categorySource,
 		int priority,
-		const char* extensions,
 		unsigned int certVerifLevel
 	);
 	int GetId() const { return m_id; }
@@ -76,7 +75,6 @@ public:
 	bool GetPauseNzb() const { return m_pauseNzb; }
 	const char* GetCategory() const { return m_category.c_str(); }
 	int GetPriority() const { return m_priority; }
-	const char* GetExtensions() const { return m_extensions.c_str(); }
 	unsigned int GetCertVerificationLevel() const { return m_certVerifLevel; }
 	time_t GetLastUpdate() { return m_lastUpdate; }
 	void SetLastUpdate(time_t lastUpdate) { m_lastUpdate = lastUpdate; }
@@ -104,7 +102,6 @@ private:
 	std::string m_name;
 	std::string m_url;
 	std::string m_category;
-	std::string m_extensions;
 	std::string m_filter;
 	std::string m_outputFilename;
 	time_t m_lastUpdate = 0;

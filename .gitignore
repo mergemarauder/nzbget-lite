@@ -72,20 +72,14 @@ ipch/
 *.sln
 .vscode/
 
-# macOS
-.DS_Store
-
 # NZBGet specific
 nzbget
 build
-!synology/package/SynoBuildConf/build
 *.temp
 *.pyc
 pytest.ini
 .cache
 /.idea
-docker/downloads
-docker/config
 *.snap
 
 # Ignore all dotfiles except those explicitly needed

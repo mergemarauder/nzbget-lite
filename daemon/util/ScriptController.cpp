@@ -113,33 +113,6 @@ void EnvironmentStrings::Append(CString&& envstr)
 	m_strings.push_back(std::move(envstr));
 }
 
-#ifdef WIN32
-/*
- * Returns environment block in format suitable for using with CreateProcess.
- */
-std::unique_ptr<wchar_t[]> EnvironmentStrings::GetStrings()
-{
-	int size = 1;
-	for (CString& var : m_strings)
-	{
-		size += var.Length() + 1;
-	}
-
-	std::unique_ptr<wchar_t[]> strings = std::make_unique<wchar_t[]>(size * 2);
-
-	wchar_t* ptr = strings.get();
-	for (CString& var : m_strings)
-	{
-		WString wstr(var);
-		wcscpy(ptr, wstr);
-		ptr += wstr.Length() + 1;
-	}
-	*ptr = '\0';
-
-	return strings;
-}
-
-#else
 
 /*
  * Returns environment block in format suitable for using with execve.
@@ -152,7 +125,6 @@ std::vector<char*> EnvironmentStrings::GetStrings()
 	strings.push_back(nullptr);
 	return strings;
 }
-#endif
 
 
 ScriptController::ScriptController()
@@ -191,77 +163,6 @@ void ScriptController::SetIntEnvVar(const char* name, int value)
 	SetEnvVar(name, strValue);
 }
 
-/**
- * If szStripPrefix is not nullptr, only options, whose names start with the prefix
- * are processed. The prefix is then stripped from the names.
- * If szStripPrefix is nullptr, all options are processed; without stripping.
- */
-void ScriptController::PrepareEnvOptions(const char* stripPrefix)
-{
-	int prefixLen = stripPrefix ? strlen(stripPrefix) : 0;
-
-	for (Options::OptEntry& optEntry : g_Options->GuardOptEntries())
-	{
-		const char* value = GetOptValue(optEntry.GetName(), optEntry.GetValue());
-		if (stripPrefix && !strncmp(optEntry.GetName(), stripPrefix, prefixLen) &&
-			(int)strlen(optEntry.GetName()) > prefixLen)
-		{
-			SetEnvVarSpecial("NZBPO", optEntry.GetName() + prefixLen, value);
-		}
-		else if (!stripPrefix)
-		{
-			SetEnvVarSpecial("NZBOP", optEntry.GetName(), value);
-		}
-	}
-}
-
-void ScriptController::SetEnvVarSpecial(const char* prefix, const char* name, const char* value)
-{
-	BString<1024> varname("%s_%s", prefix, name);
-
-	// Original name
-	SetEnvVar(varname, value);
-
-	BString<1024> normVarname = *varname;
-
-	// Replace special characters  with "_" and convert to upper case
-	for (char* ptr = normVarname; *ptr; ptr++)
-	{
-		if (strchr(".:*!\"$%&/()=`+~#'{}[]@- ", *ptr)) *ptr = '_';
-		*ptr = toupper(*ptr);
-	}
-
-	// Another env var with normalized name (replaced special chars and converted to upper case)
-	if (strcmp(varname, normVarname))
-	{
-		SetEnvVar(normVarname, value);
-	}
-}
-
-#ifdef WIN32
-void ScriptController::PrepareArgs()
-{
-	if (m_args.empty()) return;
-
-	const std::string script = m_args[0].Str();
-	const std::string& shellOverride = g_Options->GetShellOverride();
-	const auto found = Util::FindExecutorProgram(script, shellOverride);
-	if (!found)
-	{
-		PrintMessage(Message::mkError, "No executor found for %s", script.c_str());
-		return;
-	}
-
-	const std::string exeProgram = std::move(found.value());
-
-	bool isDirectlyExecutable = exeProgram == script;
-	if (isDirectlyExecutable) return;
-
-	m_args.emplace(m_args.begin(), exeProgram.c_str());
-}
-#endif
-
-#ifndef WIN32
 void ScriptController::PrepareArgs()
 {
 	*m_cmdLine = '\0';
@@ -287,11 +188,9 @@ void ScriptController::PrepareArgs()
 		strncpy(m_cmdLine, m_args[0], sizeof(m_cmdLine) - 1);
 	}
 }
-#endif
 
 int ScriptController::Execute()
 {
-	PrepareEnvOptions(nullptr);
 	PrepareArgs();
 
 	m_completed = false;
@@ -407,12 +306,10 @@ int ScriptController::Execute()
 	if (!m_detached)
 	{
 		exitCode = WaitProcess();
-#ifndef WIN32
 		if (exitCode == FORK_ERROR_EXIT_CODE && startError)
 		{
 			exitCode = -1;
 		}
-#endif
 	}
 
 #ifdef CHILD_WATCHDOG
@@ -424,21 +321,6 @@ int ScriptController::Execute()
 	return exitCode;
 }
 
-#ifdef WIN32
-void ScriptController::BuildCommandLine(char* cmdLineBuf, int bufSize)
-{
-	int usedLen = 0;
-	for (const char* arg : m_args)
-	{
-		int len = strlen(arg);
-		bool endsWithBackslash = arg[len - 1] == '\\';
-		bool isDirectPath = !strncmp(arg, "\\\\?", 3);
-		snprintf(cmdLineBuf + usedLen, bufSize - usedLen, endsWithBackslash && ! isDirectPath ? "\"%s\\\" " : "\"%s\" ", arg);
-		usedLen += len + 3 + (endsWithBackslash ? 1 : 0);
-	}
-	cmdLineBuf[usedLen < bufSize ? usedLen - 1 : bufSize - 1] = '\0';
-}
-#endif
 
 /*
 * Returns file descriptor of the read-pipe or -1 on error.
@@ -453,94 +335,6 @@ void ScriptController::StartProcess(int* pipein, int* pipeout)
 
 	const char* script = m_args[0];
 
-#ifdef WIN32
-	char* cmdLine = m_cmdLine;
-	char cmdLineBuf[2048];
-	BuildCommandLine(cmdLineBuf, sizeof(cmdLineBuf));
-	cmdLine = cmdLineBuf;
-
-	debug("Starting process: %s", cmdLine);
-
-	WString wideWorkingDir = FileSystem::UtfPathToWidePath(workingDir);
-	if (strlen(workingDir) > 260 - 14)
-	{
-		GetShortPathNameW(wideWorkingDir, wideWorkingDir, wideWorkingDir.Length() + 1);
-	}
-
-	// create pipes to write and read data
-	HANDLE readPipe, readProcPipe;
-	HANDLE writePipe = 0, writeProcPipe = 0;
-	SECURITY_ATTRIBUTES securityAttributes = { 0 };
-	securityAttributes.nLength = sizeof(securityAttributes);
-	securityAttributes.bInheritHandle = TRUE;
-
-	CreatePipe(&readPipe, &readProcPipe, &securityAttributes, 0);
-	SetHandleInformation(readPipe, HANDLE_FLAG_INHERIT, 0);
-
-	if (m_needWrite)
-	{
-		CreatePipe(&writeProcPipe, &writePipe, &securityAttributes, 0);
-		SetHandleInformation(writePipe, HANDLE_FLAG_INHERIT, 0);
-	}
-
-	STARTUPINFOW startupInfo = { 0 };
-	startupInfo.cb = sizeof(startupInfo);
-	startupInfo.dwFlags = STARTF_USESTDHANDLES;
-	startupInfo.hStdInput = writeProcPipe;
-	startupInfo.hStdOutput = readProcPipe;
-	startupInfo.hStdError = readProcPipe;
-
-	PROCESS_INFORMATION processInfo = { 0 };
-
-	std::unique_ptr<wchar_t[]> environmentStrings = m_environmentStrings.GetStrings();
-
-	BOOL ok = CreateProcessW(nullptr, WString(cmdLine), nullptr, nullptr, TRUE,
-		NORMAL_PRIORITY_CLASS | CREATE_NEW_PROCESS_GROUP | CREATE_UNICODE_ENVIRONMENT,
-		environmentStrings.get(), wideWorkingDir, &startupInfo, &processInfo);
-	if (!ok)
-	{
-		DWORD errCode = GetLastError();
-		char errMsg[255];
-		errMsg[255 - 1] = '\0';
-		if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, errCode, 0, errMsg, 255, nullptr))
-		{
-			PrintMessage(Message::mkError, "Could not start %s: %s", *m_infoName, errMsg);
-		}
-		else
-		{
-			PrintMessage(Message::mkError, "Could not start %s: error %i", *m_infoName, errCode);
-		}
-		if (!FileSystem::FileExists(script))
-		{
-			PrintMessage(Message::mkError, "Could not find file %s", script);
-		}
-		if (wcslen(wideWorkingDir) > 260)
-		{
-			PrintMessage(Message::mkError, "Could not build short path for %s", std::move(workingDir));
-		}
-		CloseHandle(readPipe);
-		CloseHandle(readProcPipe);
-		CloseHandle(writePipe);
-		CloseHandle(writeProcPipe);
-		return;
-	}
-
-	debug("Child Process-ID: %i", (int)processInfo.dwProcessId);
-
-	m_processId = processInfo.hProcess;
-	m_dwProcessId = processInfo.dwProcessId;
-
-	// close unused pipe ends
-	CloseHandle(readProcPipe);
-	CloseHandle(writeProcPipe);
-
-	*pipein = _open_osfhandle((intptr_t)readPipe, _O_RDONLY);
-	if (m_needWrite)
-	{
-		*pipeout = _open_osfhandle((intptr_t)writePipe, _O_WRONLY);
-	}
-
-#else
 
 	int pin[] = {0, 0};
 	int pout[] = {0, 0};
@@ -663,18 +457,10 @@ void ScriptController::StartProcess(int* pipein, int* pipeout)
 	{
 		close(pout[0]);
 	}
-#endif
 }
 
 int ScriptController::WaitProcess()
 {
-#ifdef WIN32
-	// wait max 60 seconds for terminated processes
-	WaitForSingleObject(m_processId, m_terminated ? 60 * 1000 : INFINITE);
-	DWORD exitCode = 0;
-	GetExitCodeProcess(m_processId, &exitCode);
-	return exitCode;
-#else
 	int status = 0;
 	waitpid(m_processId, &status, 0);
 	if (WIFEXITED(status))
@@ -683,7 +469,6 @@ int ScriptController::WaitProcess()
 		return exitCode;
 	}
 	return 0;
-#endif
 }
 
 void ScriptController::Terminate()
@@ -691,9 +476,6 @@ void ScriptController::Terminate()
 	debug("Stopping %s", *m_infoName);
 	m_terminated = true;
 
-#ifdef WIN32
-	BOOL ok = TerminateProcess(m_processId, -1) || m_completed;
-#else
 	pid_t killId = m_processId;
 	if (getpgid(killId) == killId)
 	{
@@ -701,7 +483,6 @@ void ScriptController::Terminate()
 		killId = -killId;
 	}
 	bool ok = (killId && kill(killId, SIGKILL) == 0) || m_completed;
-#endif
 
 	if (ok)
 	{
@@ -740,11 +521,7 @@ bool ScriptController::Break()
 {
 	debug("Sending break signal to %s", *m_infoName);
 
-#ifdef WIN32
-	BOOL ok = GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, m_dwProcessId);
-#else
 	bool ok = kill(m_processId, SIGINT) == 0;
-#endif
 
 	if (ok)
 	{

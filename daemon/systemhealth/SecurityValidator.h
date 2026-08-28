@@ -158,17 +158,6 @@ private:
 	const Options& m_options;
 };
 
-class FormAuthValidator final : public Validator
-{
-public:
-	explicit FormAuthValidator(const Options& options) : m_options(options) {}
-	std::string_view GetName() const override { return Options::FORMAUTH; }
-	Status Validate() const override;
-
-private:
-	const Options& m_options;
-};
-
 class SecureControlValidator final : public Validator
 {
 public:
@@ -202,18 +191,6 @@ private:
 	const Options& m_options;
 };
 
-class UpdateCheckValidator final : public Validator
-{
-public:
-	explicit UpdateCheckValidator(const Options& options) : m_options(options) {}
-	std::string_view GetName() const override { return Options::UPDATECHECK; }
-	Status Validate() const override;
-
-private:
-	const Options& m_options;
-};
-
-#ifndef _WIN32
 class DaemonUsernameValidator final : public Validator
 {
 public:
@@ -235,7 +212,6 @@ public:
 private:
 	const Options& m_options;
 };
-#endif
 
 }  // namespace SystemHealth::Security
 

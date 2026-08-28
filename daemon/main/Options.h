@@ -45,7 +45,6 @@ public:
 	static constexpr std::string_view QUEUEDIR = "QueueDir";
 	static constexpr std::string_view NZBDIR = "NzbDir";
 	static constexpr std::string_view CONFIGTEMPLATE = "ConfigTemplate";
-	static constexpr std::string_view SCRIPTDIR = "ScriptDir";
 	static constexpr std::string_view REQUIREDDIR = "RequiredDir";
 	static constexpr std::string_view LOGFILE = "LogFile";
 	static constexpr std::string_view WRITELOG = "WriteLog";
@@ -64,7 +63,6 @@ public:
 	static constexpr std::string_view RESTRICTEDPASSWORD = "RestrictedPassword";
 	static constexpr std::string_view ADDUSERNAME = "AddUsername";
 	static constexpr std::string_view ADDPASSWORD = "AddPassword";
-	static constexpr std::string_view FORMAUTH = "FormAuth";
 	static constexpr std::string_view SECURECONTROL = "SecureControl";
 	static constexpr std::string_view SECUREPORT = "SecurePort";
 	static constexpr std::string_view SECURECERT = "SecureCert";
@@ -111,9 +109,6 @@ public:
 	static constexpr std::string_view HARDLINKINGIGNOREEXT = "HardLinkingIgnoreExt";
 	static constexpr std::string_view UMASK = "UMask";
 	static constexpr std::string_view UPDATEINTERVAL = "UpdateInterval";
-	static constexpr std::string_view CURSESNZBNAME = "CursesNzbName";
-	static constexpr std::string_view CURSESTIME = "CursesTime";
-	static constexpr std::string_view CURSESGROUP = "CursesGroup";
 	static constexpr std::string_view CRCCHECK = "CrcCheck";
 	static constexpr std::string_view DIRECTWRITE = "DirectWrite";
 	static constexpr std::string_view WRITEBUFFER = "WriteBuffer";
@@ -125,7 +120,6 @@ public:
 	static constexpr std::string_view CRASHTRACE = "CrashTrace";
 	static constexpr std::string_view CRASHDUMP = "CrashDump";
 	static constexpr std::string_view PARPAUSEQUEUE = "ParPauseQueue";
-	static constexpr std::string_view SCRIPTPAUSEQUEUE = "ScriptPauseQueue";
 	static constexpr std::string_view NZBCLEANUPDISK = "NzbCleanupDisk";
 	static constexpr std::string_view PARTIMELIMIT = "ParTimeLimit";
 	static constexpr std::string_view KEEPHISTORY = "KeepHistory";
@@ -137,8 +131,6 @@ public:
 	static constexpr std::string_view SEVENZIPCMD = "SevenZipCmd";
 	static constexpr std::string_view UNPACKPASSFILE = "UnpackPassFile";
 	static constexpr std::string_view UNPACKPAUSEQUEUE = "UnpackPauseQueue";
-	static constexpr std::string_view SCRIPTORDER = "ScriptOrder";
-	static constexpr std::string_view EXTENSIONS = "Extensions";
 	static constexpr std::string_view EXTCLEANUPDISK = "ExtCleanupDisk";
 	static constexpr std::string_view PARIGNOREEXT = "ParIgnoreExt";
 	static constexpr std::string_view UNPACKIGNOREEXT = "UnpackIgnoreExt";
@@ -153,7 +145,6 @@ public:
 	static constexpr std::string_view QUOTASTARTDAY = "QuotaStartDay";
 	static constexpr std::string_view DAILYQUOTA = "DailyQuota";
 	static constexpr std::string_view REORDERFILES = "ReorderFiles";
-	static constexpr std::string_view UPDATECHECK = "UpdateCheck";
 
 // obsolete options
 	static constexpr std::string_view POSTLOGKIND = "PostLogKind";
@@ -177,9 +168,6 @@ public:
 	static constexpr std::string_view PARCLEANUPQUEUE = "ParCleanupQueue";
 	static constexpr std::string_view DELETECLEANUPDISK = "DeleteCleanupDisk";
 	static constexpr std::string_view HISTORYCLEANUPDISK = "HistoryCleanupDisk";
-	static constexpr std::string_view SCANSCRIPT = "ScanScript";
-	static constexpr std::string_view QUEUESCRIPT = "QueueScript";
-	static constexpr std::string_view FEEDSCRIPT = "FeedScript";
 	static constexpr std::string_view DECODE = "Decode";
 	static constexpr std::string_view SAVEQUEUE = "SaveQueue";
 	static constexpr std::string_view RELOADQUEUE = "ReloadQueue";
@@ -205,8 +193,7 @@ public:
 	enum EOutputMode
 	{
 		omLoggable,
-		omColored,
-		omNCurses
+		omColored
 	};
 	enum EParCheck
 	{
@@ -236,8 +223,6 @@ public:
 		scPausePostProcess,
 		scUnpausePostProcess,
 		scDownloadRate,
-		scScript,
-		scProcess,
 		scPauseScan,
 		scUnpauseScan,
 		scActivateServer,
@@ -311,10 +296,9 @@ public:
 	class Category
 	{
 	public:
-		Category(const char* name, const char* destDir, bool unpack, const char* extensions)
+		Category(const char* name, const char* destDir, bool unpack)
 			: m_name(name ? name : ""),
 			  m_destDir(destDir ? destDir : ""),
-			  m_extensions(extensions ? extensions : ""),
 			  m_destDirPath(m_destDir),
 			  m_unpack(unpack)
 		{
@@ -323,14 +307,12 @@ public:
 		const char* GetDestDir() const { return m_destDir.c_str(); }
 		const fs::path& GetDestDirPath() const { return m_destDirPath; }
 		bool GetUnpack() const { return m_unpack; }
-		const char* GetExtensions() const { return m_extensions.c_str(); }
 		NameList* GetAliases() { return &m_aliases; }
 		const NameList* GetAliases() const { return &m_aliases; }
 
 	private:
 		const std::string m_name;
 		const std::string m_destDir;
-		const std::string m_extensions;
 		const fs::path m_destDirPath;
 		NameList m_aliases;
 		const bool m_unpack;
@@ -364,7 +346,6 @@ public:
 			const char* category,
 			FeedInfo::CategorySource categorySource,
 			int priority,
-			const char* extensions,
 			unsigned int certVeriflevel
 		) = 0;
 		virtual void AddTask(
@@ -384,7 +365,6 @@ public:
 	~Options();
 
 	static bool SplitOptionString(const char* option, CString& optName, CString& optValue);
-	static void ConvertOldOptions(OptEntries* optEntries);
 	bool GetFatalError() { return m_fatalError; }
 	GuardedOptEntries GuardOptEntries() { return GuardedOptEntries(&m_optEntries, &m_optEntriesMutex); }
 	void CreateSchedulerTask(int id, const char* time, const char* weekDays,
@@ -401,7 +381,6 @@ public:
 	const char* GetQueueDir() const { return m_queueDir; }
 	const char* GetNzbDir() const { return m_nzbDir; }
 	const char* GetConfigTemplate() const { return m_configTemplate; }
-	const char* GetScriptDir() const { return m_scriptDir; }
 	const char* GetRequiredDir() const { return m_requiredDir; }
 	bool GetSystemHealthCheck() const { return m_systemHealthCheck; }
 	bool GetNzbLog() const { return m_nzbLog; }
@@ -432,7 +411,6 @@ public:
 	const char* GetAddUsername() const { return m_addUsername; }
 	const char* GetAddPassword() const { return m_addPassword; }
 	int GetControlPort() const { return m_controlPort; }
-	bool GetFormAuth() const { return m_formAuth; }
 	bool GetSecureControl() const { return m_secureControl; }
 	int GetSecurePort() const { return m_securePort; }
 	const char* GetSecureCert() const { return m_secureCert; }
@@ -458,13 +436,8 @@ public:
 	int GetParThreads() const { return m_parThreads; }
 	bool GetRarRename() const { return m_rarRename; }
 	EHealthCheck GetHealthCheck() const { return m_healthCheck; }
-	const char* GetScriptOrder() const { return m_scriptOrder; }
-	const char* GetExtensions() const { return m_extensions; }
 	int GetUMask() const { return m_umask; }
 	int GetUpdateInterval() const { return m_updateInterval; }
-	bool GetCursesNzbName() const { return m_cursesNzbName; }
-	bool GetCursesTime() const { return m_cursesTime; }
-	bool GetCursesGroup() const { return m_cursesGroup; }
 	bool GetCrcCheck() const { return m_crcCheck; }
 	bool GetDirectWrite() const { return m_directWrite; }
 	int GetWriteBuffer() const { return m_writeBuffer; }
@@ -477,7 +450,6 @@ public:
 	bool GetCrashTrace() const { return m_crashTrace; }
 	bool GetCrashDump() const { return m_crashDump; }
 	bool GetParPauseQueue() const { return m_parPauseQueue; }
-	bool GetScriptPauseQueue() const { return m_scriptPauseQueue; }
 	bool GetNzbCleanupDisk() const { return m_nzbCleanupDisk; }
 	int GetParTimeLimit() const { return m_parTimeLimit; }
 	int GetKeepHistory() const { return m_keepHistory; }
@@ -540,7 +512,6 @@ public:
 	const fs::path& GetUnpackPassFilePath() const { return m_unpackPassFilePath; }
 	const fs::path& GetUnrarPath() const { return m_unrarPath; }
 	const fs::path& GetSevenZipPath() const { return m_sevenZipPath; }
-	const std::vector<fs::path>& GetScriptDirPaths() const { return m_scriptDirPaths; }
 
 private:
 	void CheckDirs();
@@ -571,7 +542,6 @@ private:
 	fs::path m_unpackPassFilePath;
 	fs::path m_unrarPath;
 	fs::path m_sevenZipPath;
-	std::vector<fs::path> m_scriptDirPaths;
 
 	bool m_configErrors = false;
 	int m_configLine = 0;
@@ -584,7 +554,6 @@ private:
 	CString m_queueDir;
 	CString m_nzbDir;
 	CString m_configTemplate;
-	CString m_scriptDir;
 	CString m_requiredDir;
 	EMessageTarget m_infoTarget = mtScreen;
 	EMessageTarget m_warningTarget = mtScreen;
@@ -614,7 +583,6 @@ private:
 	CString m_restrictedPassword;
 	CString m_addUsername;
 	CString m_addPassword;
-	bool m_formAuth = false;
 	int m_controlPort = 0;
 	bool m_secureControl = false;
 	int m_securePort = 0;
@@ -644,13 +612,8 @@ private:
 	bool m_hardLinking = false;
 	CString m_hardLinkingIgnoreExt;
 	EHealthCheck m_healthCheck = hcNone;
-	CString m_extensions;
-	CString m_scriptOrder;
 	int m_umask = 0;
 	int m_updateInterval = 0;
-	bool m_cursesNzbName = false;
-	bool m_cursesTime = false;
-	bool m_cursesGroup = false;
 	bool m_crcCheck = false;
 	bool m_directWrite = false;
 	int m_writeBuffer = 0;
@@ -663,7 +626,6 @@ private:
 	bool m_crashTrace = false;
 	bool m_crashDump = false;
 	bool m_parPauseQueue = false;
-	bool m_scriptPauseQueue = false;
 	bool m_nzbCleanupDisk = false;
 	int m_parTimeLimit = 0;
 	int m_keepHistory = 0;
@@ -728,8 +690,6 @@ private:
 	void ConfigWarn(const char* msg, ...);
 	void LocateOptionSrcPos(const char *optionName);
 	static void ConvertOldOption(CString& option, CString& value);
-	static void MergeOldScriptOption(OptEntries* optEntries, const char* optname, bool mergeCategories);
-	static bool HasScript(const char* scriptList, const char* scriptName);
 };
 
 extern Options* g_Options;

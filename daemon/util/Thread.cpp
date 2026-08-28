@@ -79,15 +79,11 @@ bool Thread::Kill()
 
 	std::lock_guard<std::mutex> guard(m_threadMutex);
 
-#ifdef WIN32
-	bool terminated = TerminateThread(m_threadObj, 0) != 0;
-#else
 #ifdef HAVE_PTHREAD_CANCEL
 	bool terminated = pthread_cancel(m_threadObj) == 0;
 #else
 	bool terminated = false;
 	warn("Could not kill thread: thread cancelling isn't supported on this platform");
-#endif
 #endif
 
 	if (terminated)

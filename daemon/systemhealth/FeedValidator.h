@@ -84,18 +84,6 @@ private:
 	const FeedInfo& m_feed;
 };
 
-class ScriptsValidator final : public Validator
-{
-public:
-	ScriptsValidator(const FeedInfo& feed) : m_feed(feed) {}
-
-	std::string_view GetName() const override { return "Extensions"; }
-	Status Validate() const override;
-
-private:
-	const FeedInfo& m_feed;
-};
-
 class CategoryValidator final : public Validator
 {
 public:

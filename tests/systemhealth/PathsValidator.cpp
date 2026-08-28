@@ -41,7 +41,6 @@ struct StubOptions : public Options
 	fs::path GetNzbDirPath() const { return ""; }
 	fs::path GetQueueDirPath() const { return ""; }
 	fs::path GetTempDirPath() const { return ""; }
-	std::vector<std::string> GetScriptDirPaths() const { return {}; }
 	fs::path GetConfigTemplatePath() const { return ""; }
 	fs::path GetLogFilePath() const { return ""; }
 	fs::path GetCertStorePath() const { return ""; }
@@ -161,7 +160,6 @@ BOOST_AUTO_TEST_CASE(TestCertStoreValidator)
 	BOOST_CHECK(s.IsError());
 }
 
-#ifndef _WIN32
 BOOST_AUTO_TEST_CASE(TestLockFileValidator)
 {
 	LockFileValidator validator(options, *g_Log);
@@ -181,18 +179,6 @@ BOOST_AUTO_TEST_CASE(TestLockFileValidator)
 	BOOST_CHECK(validator.Validate(lock, true).IsOk());
 
 	BOOST_CHECK(validator.Validate(tempPath / "nolock", true).IsError());
-}
-#endif
-
-BOOST_AUTO_TEST_CASE(TestScriptDirValidator)
-{
-	ScriptDirValidator validator(options);
-	fs::path dir = tempPath / "scripts";
-
-	fs::create_directory(dir);
-	BOOST_CHECK(validator.Validate(dir).IsOk());
-
-	BOOST_CHECK(validator.Validate(tempPath / "missing_scripts").IsError());
 }
 
 BOOST_AUTO_TEST_CASE(TestPathsValidatorComposite)

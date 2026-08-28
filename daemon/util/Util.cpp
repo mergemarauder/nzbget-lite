@@ -26,93 +26,9 @@
 #include <array>
 #include "Util.h"
 
-#ifdef WIN32
-#include "utf8.h"
 
-// getopt for WIN32:
-// from http://www.codeproject.com/cpp/xgetopt.asp
-// Original Author:  Hans Dietrich (hdietrich2@hotmail.com)
-// Released to public domain from author (thanks)
-// Slightly modified by Andrey Prygunkov
-
-char	*optarg;		// global argument pointer
-int		optind = 0; 	// global argv index
-
-int getopt(int argc, char *argv[], char *optstring)
-{
-	static char *next = nullptr;
-	if (optind == 0)
-		next = nullptr;
-
-	optarg = nullptr;
-
-	if (next == nullptr || *next == '\0')
-	{
-		if (optind == 0)
-			optind++;
-
-		if (optind >= argc || argv[optind][0] != '-' || argv[optind][1] == '\0')
-		{
-			optarg = nullptr;
-			if (optind < argc)
-				optarg = argv[optind];
-			return -1;
-		}
-
-		if (strcmp(argv[optind], "--") == 0)
-		{
-			optind++;
-			optarg = nullptr;
-			if (optind < argc)
-				optarg = argv[optind];
-			return -1;
-		}
-
-		next = argv[optind];
-		next++;		// skip past -
-		optind++;
-	}
-
-	char c = *next++;
-	char *cp = strchr(optstring, c);
-
-	if (cp == nullptr || c == ':')
-	{
-		fprintf(stderr, "Invalid option %c", c);
-		return '?';
-	}
-
-	cp++;
-	if (*cp == ':')
-	{
-		if (*next != '\0')
-		{
-			optarg = next;
-			next = nullptr;
-		}
-		else if (optind < argc)
-		{
-			optarg = argv[optind];
-			optind++;
-		}
-		else
-		{
-			fprintf(stderr, "Option %c needs an argument", c);
-			return '?';
-		}
-	}
-
-	return c;
-}
-#endif
-
-#ifdef WIN32
-const char* Util::NULL_OUTPUT = " >nul 2>nul";
-const char* Util::FIND_CMD = "where ";
-#else
 const char* Util::NULL_OUTPUT = " > /dev/null 2> /dev/null";
 const char* Util::FIND_CMD = "which ";
-#endif
 
 char Util::VersionRevisionBuf[100];
 
@@ -215,19 +131,11 @@ std::optional<fs::path> Util::ResolvePathFromEnv(std::string_view path)
 {
 	if (path.empty()) return std::nullopt;
 
-#ifdef _WIN32
-	const wchar_t* envPath = _wgetenv(L"PATH");
-	if (!envPath) return std::nullopt;
-	std::wstring dir;
-	std::wstringstream ss(envPath);
-	wchar_t delimiter = ';';
-#else
 	const char* envPath = std::getenv("PATH");
 	if (!envPath) return std::nullopt;
 	std::string dir;
 	std::stringstream ss(envPath);
 	char delimiter = ':';
-#endif
 
 	while (std::getline(ss, dir, delimiter))
 	{
@@ -717,14 +625,7 @@ uint32 Util::HashBJ96(const char* buffer, int bufSize, uint32 initValue)
 
 std::unique_ptr<FILE, std::function<void(FILE*)>> Util::MakePipe(const std::string& cmd)
 {
-#ifdef WIN32
-	auto res = Utf8::Utf8ToWide(cmd);
-	if (!res.has_value()) return nullptr;
-
-	FILE* pipe = popen(res.value().c_str(), L"r");
-#else
 	FILE* pipe = popen(cmd.c_str(), "r");
-#endif
 
 	return std::unique_ptr<FILE, std::function<void(FILE*)>>(pipe, [](FILE* pipe)
 		{
@@ -736,21 +637,6 @@ std::unique_ptr<FILE, std::function<void(FILE*)>> Util::MakePipe(const std::stri
 	);
 }
 
-#ifdef WIN32
-bool Util::RegReadStr(HKEY keyRoot, const char* keyName, const char* valueName, char* buffer, int* bufLen)
-{
-	HKEY subKey;
-	if (!RegOpenKeyEx(keyRoot, keyName, 0, KEY_READ, &subKey))
-	{
-		DWORD retBytes = *bufLen;
-		LONG ret = RegQueryValueEx(subKey, valueName, nullptr, nullptr, (LPBYTE)buffer, &retBytes);
-		*bufLen = retBytes;
-		RegCloseKey(subKey);
-		return ret == 0;
-	}
-	return false;
-}
-#else
 std::optional<std::string> Util::Uname(const char* key)
 {
 	std::string cmd = std::string("uname ") + key;
@@ -767,27 +653,10 @@ std::optional<std::string> Util::Uname(const char* key)
 
 	return std::nullopt;
 }
-#endif
 
 time_t Util::CurrentTime()
 {
-#ifdef WIN32
-	// C-library function "time()" works on Windows too but is very CPU intensive
-	// since it uses high performance timer which we don't need anyway.
-	// A combination of GetSystemTime() + Timegm() works much faster.
-	SYSTEMTIME systm;
-	GetSystemTime(&systm);
-	struct tm tm;
-	tm.tm_year = systm.wYear - 1900;
-	tm.tm_mon = systm.wMonth - 1;
-	tm.tm_mday = systm.wDay;
-	tm.tm_hour = systm.wHour;
-	tm.tm_min = systm.wMinute;
-	tm.tm_sec = systm.wSecond;
-	return Timegm(&tm);
-#else
 	return ::time(nullptr);
-#endif
 }
 
 /* From boost */
@@ -866,9 +735,6 @@ bool Util::StrCaseCmp(const std::string& a, const std::string& b)
 // prevent PC from going to sleep
 void Util::SetStandByMode([[maybe_unused]] bool standBy)
 {
-#ifdef WIN32
-	SetThreadExecutionState((standBy ? 0 : ES_SYSTEM_REQUIRED) | ES_CONTINUOUS);
-#endif
 }
 
 int Util::NumberOfCpuCores()
@@ -878,21 +744,9 @@ int Util::NumberOfCpuCores()
 
 int64 Util::CurrentTicks()
 {
-#ifdef WIN32
-	static int64 hz=0, hzo=0;
-	if (!hz)
-	{
-		QueryPerformanceFrequency((LARGE_INTEGER*)&hz);
-		QueryPerformanceCounter((LARGE_INTEGER*)&hzo);
-	}
-	int64 t;
-	QueryPerformanceCounter((LARGE_INTEGER*)&t);
-	return ((t-hzo)*1000000)/hz;
-#else
 	timeval t;
 	gettimeofday(&t, nullptr);
 	return (int64)(t.tv_sec) * 1000000ll + (int64)(t.tv_usec);
-#endif
 }
 
 void Util::Sleep(int ms)

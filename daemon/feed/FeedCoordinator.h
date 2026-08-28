@@ -61,7 +61,7 @@ public:
 	/* may return empty pointer on error */
 	std::shared_ptr<FeedItemList> PreviewFeed(int id, const char* name, const char* url,
 		const char* filter, bool backlog, bool pauseNzb, const char* category, FeedInfo::CategorySource categorySource, int priority,
-		int interval, const char* feedScript, int cacheTimeSec, const char* cacheId);
+		int interval, int cacheTimeSec, const char* cacheId);
 
 	/* may return empty pointer on error */
 	std::shared_ptr<FeedItemList> ViewFeed(int id);

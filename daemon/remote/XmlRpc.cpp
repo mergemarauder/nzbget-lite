@@ -29,7 +29,6 @@
 #include "ServerPool.h"
 #include "Util.h"
 #include "FileSystem.h"
-#include "Maintenance.h"
 #include "StatMeter.h"
 #include "ArticleWriter.h"
 #include "DiskState.h"
@@ -242,30 +241,6 @@ class EditServerXmlCommand final : public XmlCommand
 {
 public:
 	void Execute() override;
-};
-
-class ReadUrlXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class CheckUpdatesXmlCommand final : public XmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class StartUpdateXmlCommand final : public XmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class LogUpdateXmlCommand final : public LogXmlCommand
-{
-protected:
-	GuardedMessageList GuardMessages() override;
 };
 
 class ServerVolumesXmlCommand final : public SafeXmlCommand
@@ -805,22 +780,6 @@ std::unique_ptr<XmlCommand> XmlRpcProcessor::CreateCommand(const char* methodNam
 	{
 		command = std::make_unique<EditServerXmlCommand>();
 	}
-	else if (!strcasecmp(methodName, "readurl"))
-	{
-		command = std::make_unique<ReadUrlXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "checkupdates"))
-	{
-		command = std::make_unique<CheckUpdatesXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "startupdate"))
-	{
-		command = std::make_unique<StartUpdateXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "logupdate"))
-	{
-		command = std::make_unique<LogUpdateXmlCommand>();
-	}
 	else if (!strcasecmp(methodName, "servervolumes"))
 	{
 		command = std::make_unique<ServerVolumesXmlCommand>();
@@ -1346,7 +1305,6 @@ void StatusXmlCommand::Execute()
 		"<member><name>ServerTime</name><value><i4>%i</i4></value></member>\n"
 		"<member><name>ResumeTime</name><value><i4>%i</i4></value></member>\n"
 		"<member><name>FeedActive</name><value><boolean>%s</boolean></value></member>\n"
-		"<member><name>QueueScriptCount</name><value><i4>%i</i4></value></member>\n"
 		"<member><name>NewsServers</name><value><array><data>\n";
 
 	const char* XML_STATUS_END =
@@ -1408,7 +1366,6 @@ void StatusXmlCommand::Execute()
 		"\"ServerTime\" : %i,\n"
 		"\"ResumeTime\" : %i,\n"
 		"\"FeedActive\" : %s,\n"
-		"\"QueueScriptCount\" : %i,\n"
 		"\"NewsServers\" : [\n";
 
 	const char* JSON_STATUS_END =
@@ -1541,7 +1498,6 @@ void StatusXmlCommand::Execute()
 	int serverTime = (int)Util::CurrentTime();
 	int resumeTime = (int)g_WorkState->GetResumeTime();
 	bool feedActive = g_FeedCoordinator->HasActiveDownloads();
-	int queuedScripts = 0;
 
 	AppendFmtResponse(IsJson() ? JSON_STATUS_START : XML_STATUS_START,
 		remainingSizeLo, remainingSizeHi, remainingMBytes, forcedSizeLo,
@@ -1572,8 +1528,7 @@ void StatusXmlCommand::Execute()
 		totalInterDiskSpaceMB,
 		serverTime,
 		resumeTime,
-		BoolToStr(feedActive),
-		queuedScripts
+		BoolToStr(feedActive)
 	);
 
 	int index = 0;
@@ -2861,14 +2816,13 @@ void UrlQueueXmlCommand::Execute()
 	AppendResponse(IsJson() ? "\n]" : "</data></array>\n");
 }
 
-// struct[] config()
 // struct[] viewfeed(int id)
 // v12:
 // struct[] previewfeed(string name, string url, string filter, bool pauseNzb, string category,
 //		int priority, bool includeNonMatching, int cacheTimeSec, string cacheId)
 // v16:
 // struct[] previewfeed(int id, string name, string url, string filter, bool backlog, bool pauseNzb, string category,
-//		int priority, int interval, string feedfilter, bool includeNonMatching, int cacheTimeSec, string cacheId)
+//		int priority, int interval, bool includeNonMatching, int cacheTimeSec, string cacheId)
 void ViewFeedXmlCommand::Execute()
 {
 	bool includeNonMatching = false;
@@ -2887,7 +2841,6 @@ void ViewFeedXmlCommand::Execute()
 		auto categorySource = FeedInfo::CategorySource::NZBFile;
 		int interval = 0;
 		int priority;
-		char* feedFilter = nullptr;
 		char* cacheId;
 		int cacheTimeSec;
 
@@ -2897,7 +2850,7 @@ void ViewFeedXmlCommand::Execute()
 		if (!NextParamAsStr(&name) || !NextParamAsStr(&url) || !NextParamAsStr(&filter) ||
 			(v16 && !NextParamAsBool(&backlog)) || !NextParamAsBool(&pauseNzb) ||
 			!NextParamAsStr(&category) || !NextParamAsInt(&priority) ||
-			(v16 && (!NextParamAsInt(&interval) || !NextParamAsStr(&feedFilter))) ||
+			(v16 && !NextParamAsInt(&interval)) ||
 			!NextParamAsBool(&includeNonMatching) || !NextParamAsInt(&cacheTimeSec) ||
 			!NextParamAsStr(&cacheId))
 		{
@@ -2938,7 +2891,6 @@ void ViewFeedXmlCommand::Execute()
 			categorySource,
 			priority,
 			interval,
-			feedFilter,
 			cacheTimeSec,
 			cacheId
 		);
@@ -3060,7 +3012,6 @@ void EditServerXmlCommand::Execute()
 	while (NextParamAsInt(&id))
 	{
 		first = false;
-
 		bool active;
 		if (!NextParamAsBool(&active))
 		{
@@ -3084,130 +3035,8 @@ void EditServerXmlCommand::Execute()
 		return;
 	}
 
-	if (ok)
-	{
-		g_ServerPool->Changed();
-	}
-
+	if (ok) g_ServerPool->Changed();
 	BuildBoolResponse(ok);
-}
-
-// string readurl(string url, string infoname)
-void ReadUrlXmlCommand::Execute()
-{
-	char* url;
-	if (!NextParamAsStr(&url))
-	{
-		BuildErrorResponse(2, "Invalid parameter (URL)");
-		return;
-	}
-	DecodeStr(url);
-
-	char* infoName;
-	if (!NextParamAsStr(&infoName))
-	{
-		BuildErrorResponse(2, "Invalid parameter (InfoName)");
-		return;
-	}
-	DecodeStr(infoName);
-
-	// generate temp file name
-	BString<1024> tempFileName;
-	int num = 1;
-	while (num == 1 || FileSystem::FileExists(tempFileName))
-	{
-		tempFileName.Format("%s%creadurl-%i.tmp", g_Options->GetTempDir(), PATH_SEPARATOR, num);
-		num++;
-	}
-
-	std::unique_ptr<WebDownloader> downloader = std::make_unique<WebDownloader>();
-	downloader->SetUrl(url);
-	downloader->SetForce(true);
-	downloader->SetRetry(false);
-	downloader->SetOutputFilename(tempFileName);
-	downloader->SetInfoName(infoName);
-
-	// do sync download
-	WebDownloader::EStatus status = downloader->DownloadWithRedirects(5);
-	bool ok = status == WebDownloader::adFinished;
-
-	downloader.reset();
-
-	if (ok)
-	{
-		CharBuffer fileContent;
-		FileSystem::LoadFileIntoBuffer(tempFileName, fileContent, true);
-		CString xmlContent = EncodeStr(fileContent);
-		AppendResponse(IsJson() ? "\"" : "<string>");
-		AppendResponse(xmlContent);
-		AppendResponse(IsJson() ? "\"" : "</string>");
-	}
-	else
-	{
-		BuildErrorResponse(3, "Could not read url");
-	}
-
-	FileSystem::DeleteFile(tempFileName);
-}
-
-// string checkupdates()
-void CheckUpdatesXmlCommand::Execute()
-{
-	CString updateInfo;
-	bool ok = g_Maintenance->CheckUpdates(updateInfo);
-
-	if (ok)
-	{
-		CString xmlContent = EncodeStr(updateInfo);
-		AppendResponse(IsJson() ? "\"" : "<string>");
-		AppendResponse(xmlContent);
-		AppendResponse(IsJson() ? "\"" : "</string>");
-	}
-	else
-	{
-		BuildErrorResponse(3, "Could not read update info from update-info-script");
-	}
-}
-
-// bool startupdate(string branch)
-void StartUpdateXmlCommand::Execute()
-{
-	char* branchName;
-	if (!NextParamAsStr(&branchName))
-	{
-		BuildErrorResponse(2, "Invalid parameter (Branch)");
-		return;
-	}
-	DecodeStr(branchName);
-
-	Maintenance::EBranch branch;
-	if (!strcasecmp(branchName, "stable"))
-	{
-		branch = Maintenance::brStable;
-	}
-	else if (!strcasecmp(branchName, "testing"))
-	{
-		branch = Maintenance::brTesting;
-	}
-	else if (!strcasecmp(branchName, "devel"))
-	{
-		branch = Maintenance::brDevel;
-	}
-	else
-	{
-		BuildErrorResponse(2, "Invalid parameter (Branch)");
-		return;
-	}
-
-	bool ok = g_Maintenance->StartUpdate(branch);
-
-	BuildBoolResponse(ok);
-}
-
-// struct[] logupdate(idfrom, entries)
-GuardedMessageList LogUpdateXmlCommand::GuardMessages()
-{
-	return g_Maintenance->GuardMessages();
 }
 
 // struct[] servervolumes(bool BytesPerSeconds, bool BytesPerMinutes, bool BytesPerHours, bool BytesPerDays, bool ArticlesPerDays)

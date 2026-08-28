@@ -526,12 +526,12 @@ std::shared_ptr<FeedItemList> FeedCoordinator::ViewFeed(int id)
 
 	return PreviewFeed(feedInfo->GetId(), feedInfo->GetName(), feedInfo->GetUrl(), feedInfo->GetFilter(),
 		feedInfo->GetBacklog(), feedInfo->GetPauseNzb(), feedInfo->GetCategory(), feedInfo->GetCategorySource(),
-		feedInfo->GetPriority(), feedInfo->GetInterval(), feedInfo->GetExtensions(), 0, nullptr);
+		feedInfo->GetPriority(), feedInfo->GetInterval(), 0, nullptr);
 }
 
 std::shared_ptr<FeedItemList> FeedCoordinator::PreviewFeed(int id,
 	const char* name, const char* url, const char* filter, bool backlog, bool pauseNzb,
-	const char* category, FeedInfo::CategorySource categorySource, int priority, int interval, const char* feedScript,
+	const char* category, FeedInfo::CategorySource categorySource, int priority, int interval,
 	int cacheTimeSec, const char* cacheId)
 {
 	debug("Preview feed %s", name);
@@ -543,7 +543,7 @@ std::shared_ptr<FeedItemList> FeedCoordinator::PreviewFeed(int id,
 	}
 
 	std::unique_ptr<FeedInfo> feedInfo = std::make_unique<FeedInfo>(id, name, url, backlog, interval,
-		filter, pauseNzb, category, categorySource, priority, feedScript, certVerifLevel);
+		filter, pauseNzb, category, categorySource, priority, certVerifLevel);
 	feedInfo->SetPreview(true);
 
 	std::shared_ptr<FeedItemList> feedItems;

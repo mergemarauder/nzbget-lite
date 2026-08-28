@@ -639,8 +639,6 @@ public:
 	void SetChanged(bool changed) { m_changed = changed; }
 	void SetReprocess(bool reprocess) { m_reprocess = reprocess; }
 	bool GetReprocess() { return m_reprocess; }
-	time_t GetQueueScriptTime() { return m_queueScriptTime; }
-	void SetQueueScriptTime(time_t queueScriptTime) { m_queueScriptTime = queueScriptTime; }
 	void SetParFull(bool parFull) { m_parFull = parFull; }
 	bool GetParFull() { return m_parFull; }
 	int GetFeedId() { return m_feedId; }
@@ -768,7 +766,6 @@ private:
 	int m_unpackSec = 0;
 	bool m_reprocess = false;
 	bool m_changed = false;
-	time_t m_queueScriptTime = 0;
 	bool m_parFull = false;
 	std::atomic<int> m_messageCount{0};
 	int m_cachedMessageCount = 0;

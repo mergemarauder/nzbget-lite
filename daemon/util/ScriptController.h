@@ -33,11 +33,7 @@ public:
 	void InitFromCurrentProcess();
 	void Append(const char* envstr);
 	void Append(CString&& envstr);
-#ifdef WIN32
-	std::unique_ptr<wchar_t[]> GetStrings();
-#else
 	std::vector<char*> GetStrings();
-#endif
 
 private:
 	typedef std::vector<CString> Strings;
@@ -66,7 +62,6 @@ public:
 	const char* GetInfoName() { return m_infoName; }
 	void SetLogPrefix(const char* logPrefix) { m_logPrefix = logPrefix; }
 	void SetEnvVar(const char* name, const char* value);
-	void SetEnvVarSpecial(const char* prefix, const char* name, const char* value);
 	void SetIntEnvVar(const char* name, int value);
 	bool IsTerminated() const { return m_terminated; }
 
@@ -77,16 +72,11 @@ protected:
 	virtual void AddMessage(Message::EKind kind, const char* text);
 	bool GetTerminated() { return m_terminated; }
 	void ResetEnv();
-	void PrepareEnvOptions(const char* stripPrefix);
 	void PrepareArgs();
-	virtual const char* GetOptValue([[maybe_unused]] const char* name, const char* value) { return value; }
 	void StartProcess(int* pipein, int* pipeout);
 	int WaitProcess();
 	void SetNeedWrite(bool needWrite) { m_needWrite = needWrite; }
 	void Write(const char* str);
-#ifdef WIN32
-	void BuildCommandLine(char* cmdLineBuf, int bufSize);
-#endif
 	void UnregisterRunningScript();
 
 private:
@@ -105,20 +95,11 @@ private:
 	FILE* m_readpipe = 0;
 	FILE* m_writepipe = 0;
 	char m_cmdLine[2048];
-#ifdef WIN32
-	HANDLE m_processId = 0;
-	DWORD m_dwProcessId = 0;
-#else
 	pid_t m_processId = 0;
-#endif
 
 	inline static const long ARGS_LIMIT_SIZE = []() -> long
 	{
-#ifdef _WIN32
-		return 32 * 1024;
-#else
 		return sysconf(_SC_ARG_MAX);
-#endif
 	}();
 
 	typedef std::vector<ScriptController*> RunningScripts;

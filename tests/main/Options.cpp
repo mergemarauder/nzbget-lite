@@ -65,7 +65,6 @@ protected:
 		const char* category,
 		FeedInfo::CategorySource categorySource, 
 		int priority, 
-		const char* feedScript,
 		unsigned int certVerifLevel
 	) override
 	{
@@ -89,11 +88,7 @@ BOOST_AUTO_TEST_CASE(OptionsInitWithoutConfigurationFileTest)
 	Options options(nullptr, nullptr);
 
 	BOOST_CHECK(options.GetConfigFilename() == nullptr);
-#ifdef WIN32
-	BOOST_CHECK(strcmp(options.GetTempDir(), "nzbget/tmp") == 0);
-#else
 	BOOST_CHECK(strcmp(options.GetTempDir(), "~/downloads/tmp") == 0);
-#endif
 }
 
 BOOST_AUTO_TEST_CASE(PassingCommandLineOptions)
@@ -188,7 +183,6 @@ BOOST_AUTO_TEST_CASE(ParsePathsTest)
 	cmdOpts.push_back("SecureCert=/usr/etc/nzbget/cert.pem");
 	cmdOpts.push_back("SecureKey=/usr/etc/nzbget/key.pem");
 	cmdOpts.push_back("UnpackPassFile=/usr/etc/nzbget/unpackpass");
-	cmdOpts.push_back("ScriptDir=/usr/etc/nzbget/scripts;/usr/etc/nzbget/scripts2;");
 
 	OptionsExtenderMock extender;
 	Options options(&cmdOpts, &extender);
@@ -207,11 +201,6 @@ BOOST_AUTO_TEST_CASE(ParsePathsTest)
 	BOOST_CHECK_EQUAL(options.GetSecureKey(), "/usr/etc/nzbget/key.pem");
 	BOOST_CHECK_EQUAL(options.GetUnpackPassFilePath(), "/usr/etc/nzbget/unpackpass");
 
-	const std::vector<fs::path>& scriptPaths = options.GetScriptDirPaths();
-
-	BOOST_REQUIRE_EQUAL(scriptPaths.size(), 2);
-	BOOST_CHECK_EQUAL(scriptPaths[0], "/usr/etc/nzbget/scripts");
-	BOOST_CHECK_EQUAL(scriptPaths[1], "/usr/etc/nzbget/scripts2");
 }
 
 BOOST_AUTO_TEST_CASE(ParseToolPathsTest)

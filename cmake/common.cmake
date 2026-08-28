@@ -1,4 +1,4 @@
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "i386|i686|x86|x86_64|x64|amd64|AMD64|win32|Win32")
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "i386|i686|x86|x86_64|x64|amd64|AMD64")
 	set(IS_X86 TRUE)
 	if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|x64|amd64|AMD64")
 		set(IS_X64 TRUE)
@@ -28,27 +28,15 @@ include(CheckLibraryExists)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(DEBUG 1)
 
-	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 		add_compile_options(-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic)
 	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		add_compile_options(-Wall -Wextra)
-	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-		add_compile_options(/MTd /MP /W4 /we4477 /we4473 /utf-8)
 	endif()
 
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-	if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-		add_compile_options(/MT /Oi /MP /utf-8 /guard:cf)
-		add_link_options(/guard:cf /OPT:REF /OPT:ICF)
-	else()
-		add_compile_options(-fno-rtti -ffunction-sections -fdata-sections -Wno-unused-function)
-	endif()
-
-	if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-		add_link_options(-Wl,-dead_strip)
-	else()
-		add_link_options(-Wl,--gc-sections)
-	endif()
+	add_compile_options(-fno-rtti -ffunction-sections -fdata-sections -Wno-unused-function)
+	add_link_options(-Wl,--gc-sections)
 
 	check_cxx_compiler_flag("-fstack-protector-strong" HAVE_STACK_PROTECT)
 	if(HAVE_STACK_PROTECT)
@@ -61,17 +49,12 @@ function(apply_sanitizers target)
 		return()
 	endif()
 
-	if(MSVC)
-		target_compile_options(${target} PRIVATE /fsanitize=address)
-		target_link_options(${target} PRIVATE /fsanitize=address)
-	else()
-		target_compile_options(${target} PRIVATE
-			-fsanitize=${USE_SANITIZERS}
-			-fno-omit-frame-pointer
-			-fno-sanitize-recover=all
-		)
-		target_link_options(${target} PRIVATE
-			-fsanitize=${USE_SANITIZERS}
-		)
-	endif()
+	target_compile_options(${target} PRIVATE
+		-fsanitize=${USE_SANITIZERS}
+		-fno-omit-frame-pointer
+		-fno-sanitize-recover=all
+	)
+	target_link_options(${target} PRIVATE
+		-fsanitize=${USE_SANITIZERS}
+	)
 endfunction()

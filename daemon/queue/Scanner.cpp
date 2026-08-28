@@ -35,9 +35,6 @@
 #include "FileSystem.h"
 #include "Unpack.h"
 
-#ifdef _WIN32
-#include "Utf8.h"
-#endif
 
 int Scanner::m_idGen = 0;
 

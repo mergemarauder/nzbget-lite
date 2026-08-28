@@ -27,15 +27,11 @@
 #include "Log.h"
 #include "FileSystem.h"
 
-#ifdef _WIN32
-#include "Utf8.h"
-#endif
 
 const char* BoolNames[] = { "yes", "no", "true", "false", "1", "0", "on", "off", "enable", "disable", "enabled", "disabled" };
 const int BoolValues[] = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0 };
 const int BoolCount = 12;
 
-#ifndef WIN32
 const char* PossibleConfigLocations[] =
 	{
 		"~/.nzbget",
@@ -48,7 +44,6 @@ const char* PossibleConfigLocations[] =
 		"~/usr/etc/nzbget.conf",
 		nullptr
 	};
-#endif
 
 void Options::OptEntry::SetValue(const char* value)
 {
@@ -66,7 +61,6 @@ bool Options::OptEntry::Restricted()
 
 	bool restricted = !strcasecmp(m_name, CONTROLIP.data()) ||
 		!strcasecmp(m_name, CONTROLPORT.data()) ||
-		!strcasecmp(m_name, FORMAUTH.data()) ||
 		!strcasecmp(m_name, SECURECONTROL.data()) ||
 		!strcasecmp(m_name, SECUREPORT.data()) ||
 		!strcasecmp(m_name, SECURECERT.data()) ||
@@ -76,7 +70,6 @@ bool Options::OptEntry::Restricted()
 		!strcasecmp(m_name, AUTHORIZEDIP.data()) ||
 		!strcasecmp(m_name, DAEMONUSERNAME.data()) ||
 		!strcasecmp(m_name, UMASK.data()) ||
-		strchr(m_name, ':') ||			// All extension script options
 		strstr(loName, "username") ||	// ServerX.Username, ControlUsername, etc.
 		strstr(loName, "password");		// ServerX.Password, ControlPassword, etc.
 
@@ -193,21 +186,16 @@ void Options::Init(const char* exeName, const char* configFilename, bool noConfi
 	if (!m_configFilename && !noConfig)
 	{
 		printf("No configuration-file found\n");
-#ifdef WIN32
-		printf("Please put configuration-file \"nzbget.conf\" into the directory with exe-file\n");
-#else
 		printf("Please use option \"-c\" or put configuration-file in one of the following locations:\n");
 		int p = 0;
 		while (const char* filename = PossibleConfigLocations[p++])
 		{
 			printf("%s\n", filename);
 		}
-#endif
 		m_fatalError = true;
 		return;
 	}
 
-	ConvertOldOptions(&m_optEntries);
 
 	CheckDirs();
 	InitOptions();
@@ -278,16 +266,11 @@ void Options::InitDefaults()
 	SetOption(NZBDIR.data(), "${MainDir}/nzb");
 	SetOption(LOCKFILE.data(), "${MainDir}/nzbget.lock");
 	SetOption(LOGFILE.data(), "${MainDir}/nzbget.log");
-	SetOption(SCRIPTDIR.data(), "${MainDir}/scripts");
 	SetOption(REQUIREDDIR.data(), "");
 	SetOption(WRITELOG.data(), "append");
 	SetOption(ROTATELOG.data(), "3");
 	SetOption(APPENDCATEGORYDIR.data(), "yes");
-#ifdef DISABLE_CURSES
 	SetOption(OUTPUTMODE.data(), "color");
-#else
-	SetOption(OUTPUTMODE.data(), "curses");
-#endif
 	SetOption(DUPECHECK.data(), "yes");
 	SetOption(DOWNLOADRATE.data(), "0");
 	SetOption(CONTROLIP.data(), "0.0.0.0");
@@ -298,7 +281,6 @@ void Options::InitDefaults()
 	SetOption(ADDUSERNAME.data(), "");
 	SetOption(ADDPASSWORD.data(), "");
 	SetOption(CONTROLPORT.data(), "6789");
-	SetOption(FORMAUTH.data(), "no");
 	SetOption(SECURECONTROL.data(), "no");
 	SetOption(SECUREPORT.data(), "6791");
 	SetOption(SECURECERT.data(), "");
@@ -343,14 +325,9 @@ void Options::InitDefaults()
 	SetOption(DIRECTRENAME.data(), "no");
 	SetOption(HARDLINKING.data(), "no");
 	SetOption(HARDLINKINGIGNOREEXT.data(), ".zip, .7z, .rar, *.7z.###, *.r##");
-	SetOption(SCRIPTORDER.data(), "");
-	SetOption(EXTENSIONS.data(), "");
 	SetOption(DAEMONUSERNAME.data(), "root");
 	SetOption(UMASK.data(), "1000");
 	SetOption(UPDATEINTERVAL.data(), "200");
-	SetOption(CURSESNZBNAME.data(), "yes");
-	SetOption(CURSESTIME.data(), "no");
-	SetOption(CURSESGROUP.data(), "no");
 	SetOption(CRCCHECK.data(), "yes");
 	SetOption(DIRECTWRITE.data(), "yes");
 	SetOption(WRITEBUFFER.data(), "0");
@@ -362,7 +339,6 @@ void Options::InitDefaults()
 	SetOption(CRASHTRACE.data(), "no");
 	SetOption(CRASHDUMP.data(), "no");
 	SetOption(PARPAUSEQUEUE.data(), "no");
-	SetOption(SCRIPTPAUSEQUEUE.data(), "no");
 	SetOption(NZBCLEANUPDISK.data(), "no");
 	SetOption(PARTIMELIMIT.data(), "0");
 	SetOption(KEEPHISTORY.data(), "7");
@@ -370,13 +346,8 @@ void Options::InitDefaults()
 	SetOption(DIRECTUNPACK.data(), "no");
 	SetOption(USETEMPUNPACKDIR.data(), "yes");
 	SetOption(UNPACKCLEANUPDISK.data(), "no");
-#ifdef WIN32
-	SetOption(UNRARCMD.data(), "unrar.exe");
-	SetOption(SEVENZIPCMD.data(), "7z.exe");
-#else
 	SetOption(UNRARCMD.data(), "unrar");
 	SetOption(SEVENZIPCMD.data(), "7z");
-#endif
 	SetOption(UNPACKPASSFILE.data(), "");
 	SetOption(UNPACKPAUSEQUEUE.data(), "no");
 	SetOption(EXTCLEANUPDISK.data(), "");
@@ -393,7 +364,6 @@ void Options::InitDefaults()
 	SetOption(QUOTASTARTDAY.data(), "1");
 	SetOption(DAILYQUOTA.data(), "0");
 	SetOption(REORDERFILES.data(), "no");
-	SetOption(UPDATECHECK.data(), "none");
 }
 
 void Options::InitOptFile()
@@ -401,26 +371,6 @@ void Options::InitOptFile()
 	if (!m_configFilename && !m_noConfig)
 	{
 		// search for config file in default locations
-#ifdef WIN32
-		BString<1024> filename("%s\\nzbget.conf", *m_appDir);
-
-		if (!FileSystem::FileExists(filename))
-		{
-			char appDataPath[MAX_PATH];
-			SHGetFolderPath(nullptr, CSIDL_COMMON_APPDATA, nullptr, 0, appDataPath);
-			filename.Format("%s\\NZBGet\\nzbget.conf", appDataPath);
-
-			if (m_extender && !FileSystem::FileExists(filename))
-			{
-				m_extender->SetupFirstStart();
-			}
-		}
-
-		if (FileSystem::FileExists(filename))
-		{
-			m_configFilename = filename;
-		}
-#else
 		// look in the exe-directory first
 		BString<1024> filename("%s/nzbget.conf", *m_appDir);
 
@@ -443,7 +393,6 @@ void Options::InitOptFile()
 				}
 			}
 		}
-#endif
 	}
 
 	if (m_configFilename)
@@ -451,10 +400,8 @@ void Options::InitOptFile()
 		// normalize path in filename
 		CString filename = FileSystem::ExpandFileName(m_configFilename);
 
-#ifndef WIN32
 		// substitute HOME-variable
 		filename = FileSystem::ExpandHomePath(filename);
-#endif
 
 		m_configFilename = *filename;
 		m_configFilePath = fs::u8path(*m_configFilename);
@@ -526,7 +473,6 @@ void Options::CheckDir(CString& dir, const char* optionName,
 			return;
 		}
 
-#ifndef WIN32
 		if (getuid() == 0 || geteuid() == 0)
 		{
 			struct passwd* pwd = getpwnam(GetOption(DAEMONUSERNAME.data()));
@@ -535,7 +481,6 @@ void Options::CheckDir(CString& dir, const char* optionName,
 				chown(dir, pwd->pw_uid, pwd->pw_gid);
 			}
 		}
-#endif
 	}
 }
 
@@ -547,7 +492,6 @@ void Options::CheckDirs()
 	CheckDir(m_interDir, INTERDIR.data(), m_mainDir, true, true);
 	CheckDir(m_tempDir, TEMPDIR.data(), m_mainDir, false, true);
 	CheckDir(m_queueDir, QUEUEDIR.data(), m_mainDir, false, true);
-	CheckDir(m_scriptDir, SCRIPTDIR.data(), m_mainDir, true, true);
 	CheckDir(m_nzbDir, NZBDIR.data(), m_mainDir, false, true);
 
 	m_mainDirPath = fs::u8path(*m_mainDir);
@@ -557,13 +501,6 @@ void Options::CheckDirs()
 	m_queueDirPath = fs::u8path(*m_queueDir);
 	m_nzbDirPath = fs::u8path(*m_nzbDir);
 
-	Tokenizer tokDir(g_Options->GetScriptDir(), ",;");
-	while (const char* scriptDir = tokDir.Next())
-	{
-		fs::path path;
-		path = fs::u8path(scriptDir);
-		m_scriptDirPaths.push_back(std::move(path));
-	}
 }
 
 void Options::InitOptions()
@@ -571,8 +508,6 @@ void Options::InitOptions()
 	m_requiredDir = GetOption(REQUIREDDIR.data());
 
 	m_configTemplate		= GetOption(CONFIGTEMPLATE.data());
-	m_scriptOrder			= GetOption(SCRIPTORDER.data());
-	m_extensions			= GetOption(EXTENSIONS.data());
 	m_controlIp				= GetOption(CONTROLIP.data());
 	m_controlUsername		= GetOption(CONTROLUSERNAME.data());
 	m_controlPassword		= GetOption(CONTROLPASSWORD.data());
@@ -665,9 +600,6 @@ void Options::InitOptions()
 	m_directRename			= (bool)ParseEnumValue(DIRECTRENAME.data(), BoolCount, BoolNames, BoolValues);
 	m_hardLinking			= (bool)ParseEnumValue(HARDLINKING.data(), BoolCount, BoolNames, BoolValues);
 	m_hardLinkingIgnoreExt = GetOption(HARDLINKINGIGNOREEXT.data());
-	m_cursesNzbName			= (bool)ParseEnumValue(CURSESNZBNAME.data(), BoolCount, BoolNames, BoolValues);
-	m_cursesTime			= (bool)ParseEnumValue(CURSESTIME.data(), BoolCount, BoolNames, BoolValues);
-	m_cursesGroup			= (bool)ParseEnumValue(CURSESGROUP.data(), BoolCount, BoolNames, BoolValues);
 	m_crcCheck				= (bool)ParseEnumValue(CRCCHECK.data(), BoolCount, BoolNames, BoolValues);
 	m_directWrite			= (bool)ParseEnumValue(DIRECTWRITE.data(), BoolCount, BoolNames, BoolValues);
 	m_rawArticle			= (bool)ParseEnumValue(RAWARTICLE.data(), BoolCount, BoolNames, BoolValues);
@@ -675,9 +607,7 @@ void Options::InitOptions()
 	m_crashTrace			= (bool)ParseEnumValue(CRASHTRACE.data(), BoolCount, BoolNames, BoolValues);
 	m_crashDump				= (bool)ParseEnumValue(CRASHDUMP.data(), BoolCount, BoolNames, BoolValues);
 	m_parPauseQueue			= (bool)ParseEnumValue(PARPAUSEQUEUE.data(), BoolCount, BoolNames, BoolValues);
-	m_scriptPauseQueue		= (bool)ParseEnumValue(SCRIPTPAUSEQUEUE.data(), BoolCount, BoolNames, BoolValues);
 	m_nzbCleanupDisk		= (bool)ParseEnumValue(NZBCLEANUPDISK.data(), BoolCount, BoolNames, BoolValues);
-	m_formAuth				= (bool)ParseEnumValue(FORMAUTH.data(), BoolCount, BoolNames, BoolValues);
 	m_secureControl			= (bool)ParseEnumValue(SECURECONTROL.data(), BoolCount, BoolNames, BoolValues);
 	m_unpack				= (bool)ParseEnumValue(UNPACK.data(), BoolCount, BoolNames, BoolValues);
 	m_directUnpack			= (bool)ParseEnumValue(DIRECTUNPACK.data(), BoolCount, BoolNames, BoolValues);
@@ -689,9 +619,9 @@ void Options::InitOptions()
 	m_reorderFiles			= (bool)ParseEnumValue(REORDERFILES.data(), BoolCount, BoolNames, BoolValues);
 	m_renameAfterUnpack     = (bool)ParseEnumValue(RENAMEAFTERUNPACK.data(), BoolCount, BoolNames, BoolValues);
 
-	const char* OutputModeNames[] = { "loggable", "logable", "log", "colored", "color", "ncurses", "curses" };
-	const int OutputModeValues[] = { omLoggable, omLoggable, omLoggable, omColored, omColored, omNCurses, omNCurses };
-	const int OutputModeCount = 7;
+	const char* OutputModeNames[] = { "loggable", "logable", "log", "colored", "color" };
+	const int OutputModeValues[] = { omLoggable, omLoggable, omLoggable, omColored, omColored };
+	const int OutputModeCount = 5;
 	m_outputMode = (EOutputMode)ParseEnumValue(OUTPUTMODE.data(), OutputModeCount, OutputModeNames, OutputModeValues);
 
 	const char* ParCheckNames[] = { "auto", "always", "force", "manual" };
@@ -811,7 +741,6 @@ void Options::SetOption(const char* optname, const char* value)
 
 	CString curvalue;
 
-#ifndef WIN32
 	if (value && strncmp(value, "~/", 2) == 0)
 	{
 		if (m_noDiskAccess)
@@ -824,7 +753,6 @@ void Options::SetOption(const char* optname, const char* value)
 		}
 	}
 	else
-#endif
 	{
 		curvalue = value;
 	}
@@ -1049,10 +977,9 @@ void Options::InitCategories()
 			unpack = (bool)ParseEnumValue(BString<100>("Category%i.Unpack", n), BoolCount, BoolNames, BoolValues);
 		}
 
-		const char* nextensions = GetOption(BString<100>("Category%i.Extensions", n));
 		const char* naliases = GetOption(BString<100>("Category%i.Aliases", n));
 
-		bool definition = nname || ndestdir || nunpack || nextensions || naliases;
+		bool definition = nname || ndestdir || nunpack || naliases;
 		bool completed = nname && strlen(nname) > 0;
 
 		if (!definition)
@@ -1068,7 +995,7 @@ void Options::InitCategories()
 				CheckDir(destDir, BString<100>("Category%i.DestDir", n), m_destDir, false, false);
 			}
 
-			m_categories.emplace_back(nname, destDir, unpack, nextensions);
+			m_categories.emplace_back(nname, destDir, unpack);
 			Category& category = m_categories.back();
 
 			// split Aliases into tokens and create items for each token
@@ -1099,7 +1026,6 @@ void Options::InitFeeds()
 		const char* nurl = GetOption(BString<100>("Feed%i.URL", n));
 		const char* nfilter = GetOption(BString<100>("Feed%i.Filter", n));
 		const char* ncategory = GetOption(BString<100>("Feed%i.Category", n));
-		const char* nextensions = GetOption(BString<100>("Feed%i.Extensions", n));
 
 		const char* nbacklog = GetOption(BString<100>("Feed%i.Backlog", n));
 		bool backlog = true;
@@ -1132,7 +1058,7 @@ void Options::InitFeeds()
 		}
 
 		bool definition = nname || nurl || nfilter || ncategory || nbacklog || npausenzb ||
-			ninterval || npriority || nextensions;
+			ninterval || npriority;
 		bool completed = nurl;
 
 		if (!definition)
@@ -1155,7 +1081,6 @@ void Options::InitFeeds()
 				ncategory,
 				categorySource,
 				npriority ? atoi(npriority) : 0,
-				nextensions,
 				certveriflevel
 			);
 			}
@@ -1205,26 +1130,19 @@ void Options::InitScheduler()
 
 		const char* CommandNames[] = { "pausedownload", "pause", "unpausedownload", "resumedownload", "unpause", "resume",
 			"pausepostprocess", "unpausepostprocess", "resumepostprocess", "pausepost", "unpausepost", "resumepost",
-			"downloadrate", "setdownloadrate", "rate", "speed", "script", "process", "pausescan", "unpausescan", "resumescan",
+			"downloadrate", "setdownloadrate", "rate", "speed", "pausescan", "unpausescan", "resumescan",
 			"activateserver", "activateservers", "deactivateserver", "deactivateservers", "fetchfeed", "fetchfeeds" };
 		const int CommandValues[] = { scPauseDownload, scPauseDownload, scUnpauseDownload,
 			scUnpauseDownload, scUnpauseDownload, scUnpauseDownload,
 			scPausePostProcess, scUnpausePostProcess, scUnpausePostProcess,
 			scPausePostProcess, scUnpausePostProcess, scUnpausePostProcess,
 			scDownloadRate, scDownloadRate, scDownloadRate, scDownloadRate,
-			scScript, scProcess, scPauseScan, scUnpauseScan, scUnpauseScan,
+			scPauseScan, scUnpauseScan, scUnpauseScan,
 			scActivateServer, scActivateServer, scDeactivateServer,
 			scDeactivateServer, scFetchFeed, scFetchFeed };
-		const int CommandCount = 27;
+		const int CommandCount = 25;
 		ESchedulerCommand taskCommand = (ESchedulerCommand)ParseEnumValue(
 			BString<100>("Task%i.Command", n), CommandCount, CommandNames, CommandValues);
-
-		if (param && strlen(param) > 0 && taskCommand == scProcess &&
-			Util::SplitCommandLine(param).empty())
-		{
-			ConfigError("Invalid value for option \"Task%i.Param\"", n);
-			continue;
-		}
 
 		if (taskCommand == scDownloadRate)
 		{
@@ -1245,9 +1163,7 @@ void Options::InitScheduler()
 			}
 		}
 
-		if ((taskCommand == scScript ||
-			 taskCommand == scProcess ||
-			 taskCommand == scActivateServer ||
+		if ((taskCommand == scActivateServer ||
 			 taskCommand == scDeactivateServer ||
 			 taskCommand == scFetchFeed) &&
 			Util::EmptyStr(param))
@@ -1442,7 +1358,7 @@ void Options::LoadConfigFile()
 		}
 		if (buf[0] != 0 && buf[strlen(buf)-1] == '\r')
 		{
-			buf[strlen(buf)-1] = 0; // remove traling '\r' (for windows line endings)
+			buf[strlen(buf)-1] = 0; // accept CRLF line endings
 		}
 
 		if (buf[0] == 0 || buf[0] == '#' || strspn(buf, " ") == strlen(buf))
@@ -1551,7 +1467,7 @@ bool Options::ValidateOptionName(const char* optname, const char* optvalue)
 		while (*p >= '0' && *p <= '9') p++;
 		if (!strcasecmp(p, ".time") || !strcasecmp(p, ".weekdays") ||
 			!strcasecmp(p, ".command") || !strcasecmp(p, ".param") ||
-			!strcasecmp(p, ".downloadrate") || !strcasecmp(p, ".process"))
+			!strcasecmp(p, ".downloadrate"))
 		{
 			return true;
 		}
@@ -1561,7 +1477,7 @@ bool Options::ValidateOptionName(const char* optname, const char* optvalue)
 	{
 		const char* p = optname + 8;
 		while (*p >= '0' && *p <= '9') p++;
-		if (!strcasecmp(p, ".name") || !strcasecmp(p, ".destdir") || !strcasecmp(p, ".extensions") ||
+		if (!strcasecmp(p, ".name") || !strcasecmp(p, ".destdir") ||
 			!strcasecmp(p, ".unpack") || !strcasecmp(p, ".aliases"))
 		{
 			return true;
@@ -1574,17 +1490,11 @@ bool Options::ValidateOptionName(const char* optname, const char* optvalue)
 		while (*p >= '0' && *p <= '9') p++;
 		if (!strcasecmp(p, ".name") || !strcasecmp(p, ".url") || !strcasecmp(p, ".interval") ||
 			 !strcasecmp(p, ".filter") || !strcasecmp(p, ".backlog") || !strcasecmp(p, ".pausenzb") ||
-			 !strcasecmp(p, ".category") || !strcasecmp(p, ".categorySource") || !strcasecmp(p, ".priority") || 
-			 !strcasecmp(p, ".extensions") || !strcasecmp(p, ".certverification"))
+			 !strcasecmp(p, ".category") || !strcasecmp(p, ".categorySource") || !strcasecmp(p, ".priority") ||
+			 !strcasecmp(p, ".certverification"))
 		{
 			return true;
 		}
-	}
-
-	// scripts options
-	if (strchr(optname, ':'))
-	{
-		return true;
 	}
 
 	// print warning messages for obsolete options
@@ -1612,26 +1522,6 @@ bool Options::ValidateOptionName(const char* optname, const char* optvalue)
 		!strcasecmp(optname, BROKENLOG.data()))
 	{
 		ConfigWarn("Option \"%s\" is obsolete, ignored", optname);
-		return true;
-	}
-
-	if (!strcasecmp(optname, POSTPROCESS.data()) ||
-		!strcasecmp(optname, NZBPROCESS.data()) ||
-		!strcasecmp(optname, NZBADDEDPROCESS.data()))
-	{
-		if (optvalue && strlen(optvalue) > 0)
-		{
-			ConfigError("Option \"%s\" is obsolete, ignored, use \"%s\" and \"%s\" instead",
-				optname, SCRIPTDIR, EXTENSIONS);
-		}
-		return true;
-	}
-
-	if (!strcasecmp(optname, SCANSCRIPT.data()) ||
-		!strcasecmp(optname, QUEUESCRIPT.data()) ||
-		!strcasecmp(optname, FEEDSCRIPT.data()))
-	{
-		// will be automatically converted into "Extensions"
 		return true;
 	}
 
@@ -1670,7 +1560,7 @@ void Options::ConvertOldOption(CString& option, CString& value)
 
 	if (!strcasecmp(option, "PostPauseQueue"))
 	{
-		option = "ScriptPauseQueue";
+		return;
 	}
 
 	if (!strcasecmp(option, "ParCheck") && !strcasecmp(value, "yes"))
@@ -1686,24 +1576,6 @@ void Options::ConvertOldOption(CString& option, CString& value)
 	if (!strcasecmp(option, "ParScan") && !strcasecmp(value, "auto"))
 	{
 		value = "extended";
-	}
-
-	if (!strcasecmp(option, "DefScript") || !strcasecmp(option, "PostScript"))
-	{
-		option = "Extensions";
-	}
-
-	int nameLen = strlen(option);
-	if (!strncasecmp(option, "Category", 8) &&
-		((nameLen > 10 && !strcasecmp(option + nameLen - 10, ".DefScript")) ||
-		 (nameLen > 11 && !strcasecmp(option + nameLen - 11, ".PostScript"))))
-	{
-		option.Replace(".DefScript", ".Extensions");
-		option.Replace(".PostScript", ".Extensions");
-	}
-	if (!strncasecmp(option, "Feed", 4) && nameLen > 11 && !strcasecmp(option + nameLen - 11, ".FeedScript"))
-	{
-		option.Replace(".FeedScript", ".Extensions");
 	}
 
 	if (!strcasecmp(option, "WriteBufferSize"))
@@ -1763,14 +1635,6 @@ void Options::CheckOptions()
 	{
 		LocateOptionSrcPos(DIRECTRENAME.data());
 		ConfigError("Invalid value for option \"%s\": program was compiled without parcheck-support", DIRECTRENAME.data());
-	}
-#endif
-
-#ifdef DISABLE_CURSES
-	if (m_outputMode == omNCurses)
-	{
-		LocateOptionSrcPos(OUTPUTMODE.data());
-		ConfigError("Invalid value for option \"%s\": program was compiled without curses-support", OUTPUTMODE.data());
 	}
 #endif
 
@@ -1843,80 +1707,6 @@ void Options::CheckOptions()
 	{
 		ConfigError("Invalid value for option \"UnpackPassFile\": %s. File not found", *m_unpackPassFile);
 	}
-}
-
-void Options::ConvertOldOptions(OptEntries* optEntries)
-{
-	MergeOldScriptOption(optEntries, SCANSCRIPT.data(), true);
-	MergeOldScriptOption(optEntries, QUEUESCRIPT.data(), true);
-	MergeOldScriptOption(optEntries, FEEDSCRIPT.data(), false);
-}
-
-void Options::MergeOldScriptOption(OptEntries* optEntries, const char* optname, bool mergeCategories)
-{
-	OptEntry* optEntry = optEntries->FindOption(optname);
-	if (!optEntry || Util::EmptyStr(optEntry->GetValue()))
-	{
-		return;
-	}
-
-	OptEntry* extensionsOpt = optEntries->FindOption(EXTENSIONS.data());
-	if (!extensionsOpt)
-	{
-		optEntries->emplace_back(EXTENSIONS.data(), "");
-		extensionsOpt = optEntries->FindOption(EXTENSIONS.data());
-	}
-
-	const char* scriptList = optEntry->GetValue();
-
-	Tokenizer tok(scriptList, ",;");
-	while (const char* scriptName = tok.Next())
-	{
-		// merge into global "Extensions"
-		if (!HasScript(extensionsOpt->m_value, scriptName))
-		{
-			if (!extensionsOpt->m_value.Empty())
-			{
-				extensionsOpt->m_value.Append(",");
-			}
-			extensionsOpt->m_value.Append(scriptName);
-		}
-
-		// merge into categories' "Extensions" (if not empty)
-		if (mergeCategories)
-		{
-			for (OptEntry& opt : optEntries)
-			{
-				const char* catoptname = opt.GetName();
-				if (!strncasecmp(catoptname, "category", 8))
-				{
-				const char* p = catoptname + 8;
-				while (*p >= '0' && *p <= '9') p++;
-				if (!strcasecmp(p, ".extensions"))
-					{
-						if (!opt.m_value.Empty() && !HasScript(opt.m_value, scriptName))
-						{
-							opt.m_value.Append(",");
-							opt.m_value.Append(scriptName);
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-bool Options::HasScript(const char* scriptList, const char* scriptName)
-{
-	Tokenizer tok(scriptList, ",;");
-	while (const char* scriptName2 = tok.Next())
-	{
-		if (!strcasecmp(scriptName2, scriptName))
-		{
-			return true;
-		}
-	}
-	return false;
 }
 
 FeedInfo::CategorySource Options::ParseCategorySource(const char* value)

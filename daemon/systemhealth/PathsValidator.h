@@ -117,19 +117,6 @@ private:
 	const Options& m_options;
 };
 
-class ScriptDirValidator final : public Validator
-{
-public:
-	explicit ScriptDirValidator(const Options& options) : m_options(options) {}
-
-	std::string_view GetName() const override { return Options::SCRIPTDIR; }
-	Status Validate() const override;
-	static Status Validate(const fs::path& path);
-
-private:
-	const Options& m_options;
-};
-
 class ConfigTemplateValidator final : public Validator
 {
 public:
@@ -185,7 +172,6 @@ public:
 private:
 	const Options& m_options;
 };
-#ifndef _WIN32
 class LockFileValidator final : public Validator
 {
 public:
@@ -201,7 +187,6 @@ private:
 	const Options& m_options;
 	const ::Log& m_log;
 };
-#endif
 }  // namespace SystemHealth::Paths
 
 #endif

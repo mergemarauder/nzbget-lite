@@ -189,9 +189,6 @@ void RequestProcessor::Run()
 void RequestProcessor::Stop()
 {
 	Thread::Stop();
-#ifdef WIN32
-	m_connection->SetForceClose(true);
-#endif
 	m_connection->Cancel();
 }
 

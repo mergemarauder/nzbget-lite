@@ -14,7 +14,7 @@ struct FeedFixture
 		unsigned int certLevel = Options::cvStrict)
 	{
 		return std::make_unique<FeedInfo>(1, "TestFeed", url, false, 15, "", false, "",
-										  FeedInfo::CategorySource::Auto, 0, "", certLevel);
+										  FeedInfo::CategorySource::Auto, 0, certLevel);
 	}
 };
 

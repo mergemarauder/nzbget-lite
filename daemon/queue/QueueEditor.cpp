@@ -914,17 +914,12 @@ void QueueEditor::SetNzbCategory(NzbInfo* nzbInfo, const char* category, bool ap
 	debug("QueueEditor: setting category '%s' for '%s'", category, nzbInfo->GetName());
 
 	bool oldUnpack = g_Options->GetUnpack();
-	const char* oldExtensions = g_Options->GetExtensions();
 	if (applyParams && !Util::EmptyStr(nzbInfo->GetCategory()))
 	{
 		Options::Category* categoryObj = g_Options->FindCategory(nzbInfo->GetCategory(), false);
 		if (categoryObj)
 		{
 			oldUnpack = categoryObj->GetUnpack();
-			if (!Util::EmptyStr(categoryObj->GetExtensions()))
-			{
-				oldExtensions = categoryObj->GetExtensions();
-			}
 		}
 	}
 
@@ -936,60 +931,18 @@ void QueueEditor::SetNzbCategory(NzbInfo* nzbInfo, const char* category, bool ap
 	}
 
 	bool newUnpack = g_Options->GetUnpack();
-	const char* newExtensions = g_Options->GetExtensions();
 	if (!Util::EmptyStr(nzbInfo->GetCategory()))
 	{
 		Options::Category* categoryObj = g_Options->FindCategory(nzbInfo->GetCategory(), false);
 		if (categoryObj)
 		{
 			newUnpack = categoryObj->GetUnpack();
-			if (!Util::EmptyStr(categoryObj->GetExtensions()))
-			{
-				newExtensions = categoryObj->GetExtensions();
-			}
 		}
 	}
 
 	if (oldUnpack != newUnpack)
 	{
 		nzbInfo->GetParameters()->SetParameter("*Unpack:", newUnpack ? "yes" : "no");
-	}
-
-	if (strcasecmp(oldExtensions, newExtensions))
-	{
-		// add new params not existed in old category
-		Tokenizer tokNew(newExtensions, ",;");
-		while (const char* newScriptName = tokNew.Next())
-		{
-			bool found = false;
-			const char* oldScriptName;
-			Tokenizer tokOld(oldExtensions, ",;");
-			while ((oldScriptName = tokOld.Next()) && !found)
-			{
-				found = !strcasecmp(newScriptName, oldScriptName);
-			}
-			if (!found)
-			{
-				nzbInfo->GetParameters()->SetParameter(BString<1024>("%s:", newScriptName), "yes");
-			}
-		}
-
-		// remove old params not existed in new category
-		Tokenizer tokOld(oldExtensions, ",;");
-		while (const char* oldScriptName = tokOld.Next())
-		{
-			bool found = false;
-			const char* newScriptName;
-			Tokenizer tokNew(newExtensions, ",;");
-			while ((newScriptName = tokNew.Next()) && !found)
-			{
-				found = !strcasecmp(newScriptName, oldScriptName);
-			}
-			if (!found)
-			{
-				nzbInfo->GetParameters()->SetParameter(BString<1024>("%s:", oldScriptName), "no");
-			}
-		}
 	}
 }
 

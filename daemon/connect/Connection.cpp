@@ -28,13 +28,6 @@
 
 static const int CONNECTION_READBUFFER_SIZE = 1024;
 
-#if defined(__linux__) && !defined(__ANDROID__)
-// Activate DNS resolving workaround for Android:
-//  - this is only necessary in general Linux build if we want it to run on Android.
-//  - the workaround isn't needed when targeting specifically Android using Android NDK.
-#define ANDROID_RESOLVE
-#endif
-
 void closesocket_gracefully(SOCKET socket)
 {
 	char buf[1024];
@@ -50,20 +43,12 @@ void closesocket_gracefully(SOCKET socket)
 	shutdown(socket, SHUT_WR);
 
 	// Set non-blocking mode
-#ifdef WIN32
-	u_long on = 1;
-	ioctlsocket(socket, FIONBIO, &on);
-#else
 	int flags;
 	flags = fcntl(socket, F_GETFL, 0);
 	fcntl(socket, F_SETFL, flags | O_NONBLOCK);
-#endif
 
-	// Read and discard pending incoming data. If we do not do that and close the
-	// socket, the data in the send buffer may be discarded. This
-	// behaviour is seen on Windows, when client keeps sending data
-	// when server decides to close the connection; then when client
-	// does recv() it gets no data back.
+	// Read and discard pending incoming data so the response is delivered when a
+	// client continues sending after the server decides to close the connection.
 	int n;
 	do {
 		n = recv(socket, buf, sizeof(buf), 0);
@@ -73,36 +58,15 @@ void closesocket_gracefully(SOCKET socket)
 	closesocket(socket);
 }
 
-#ifdef ANDROID_RESOLVE
-std::string ResolveAndroidHost(const char* host);
-#endif
 
 void Connection::Init()
 {
 	debug("Initializing global connection data");
 
-#ifdef WIN32
-	WSADATA wsaData;
-	int err = WSAStartup(MAKEWORD(2, 0), &wsaData);
-	if (err != 0)
-	{
-		error("Could not initialize socket library");
-		return;
-	}
-	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE( wsaData.wVersion ) != 0)
-	{
-		error("Could not initialize socket library");
-		WSACleanup();
-		return;
-	}
-#endif
 }
 
 void Connection::Final()
 {
-#ifdef WIN32
-	WSACleanup();
-#endif
 }
 
 Connection::Connection(const char* host, int port, bool tls) :
@@ -206,7 +170,6 @@ bool Connection::Bind()
 
 	int errcode = 0;
 
-#ifndef WIN32
 	if (!m_host.empty() && m_host.front() == '/')
 	{
 		struct sockaddr_un addr;
@@ -235,7 +198,6 @@ bool Connection::Bind()
 		}
 	}
 	else
-#endif
 	{
 #ifdef HAVE_GETADDRINFO
 		struct addrinfo addr_hints, *addr_list, *addr;
@@ -251,10 +213,8 @@ bool Connection::Bind()
 		if (res != 0)
 		{
 			ReportError("Could not resolve hostname %s", m_host.c_str(), true
-#ifndef WIN32
 				, res != EAI_SYSTEM ? res : 0
 				, res != EAI_SYSTEM ? gai_strerror(res) : nullptr
-#endif
 				);
 			return false;
 		}
@@ -263,9 +223,6 @@ bool Connection::Bind()
 		for (addr = addr_list; addr != nullptr; addr = addr->ai_next)
 		{
 			m_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-#ifdef WIN32
-			SetHandleInformation((HANDLE)m_socket, HANDLE_FLAG_INHERIT, 0);
-#endif
 			if (m_socket != INVALID_SOCKET)
 			{
 				int opt = 1;
@@ -553,7 +510,6 @@ bool Connection::DoConnect()
 
 	m_socket = INVALID_SOCKET;
 
-#ifndef WIN32
 	if (!m_host.empty() && m_host.front() == '/')
 	{
 		struct sockaddr_un addr;
@@ -581,7 +537,6 @@ bool Connection::DoConnect()
 		}
 	}
 	else
-#endif
 	{
 #ifdef HAVE_GETADDRINFO
 		struct addrinfo addr_hints, *addr_list, *addr;
@@ -595,24 +550,12 @@ bool Connection::DoConnect()
 		int res = getaddrinfo(m_host.c_str(), portStr, &addr_hints, &addr_list);
 		debug("getaddrinfo for %s: %i", m_host.c_str(), res);
 
-#ifdef ANDROID_RESOLVE
-		if (res != 0)
-		{
-			std::string resolvedHost = ResolveAndroidHost(m_host.c_str());
-			if (!resolvedHost.empty())
-			{
-				res = getaddrinfo(resolvedHost.c_str(), portStr, &addr_hints, &addr_list);
-			}
-		}
-#endif
 
 		if (res != 0)
 		{
 			ReportError("Could not resolve hostname %s", m_host.c_str(), true
-#ifndef WIN32
 						, res != EAI_SYSTEM ? res : 0
 						, res != EAI_SYSTEM ? gai_strerror(res) : nullptr
-#endif
 						);
 			return false;
 		}
@@ -636,9 +579,6 @@ bool Connection::DoConnect()
 			}
 
 			m_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-#ifdef WIN32
-			SetHandleInformation((HANDLE)m_socket, HANDLE_FLAG_INHERIT, 0);
-#endif
 			if (m_socket == INVALID_SOCKET)
 			{
 				// try another addr/family/protocol
@@ -720,17 +660,11 @@ bool Connection::InitSocketOpts(SOCKET socket)
 {
 	char* optbuf = nullptr;
 	int optsize = 0;
-#ifdef WIN32
-	int MSecVal = m_timeout * 1000;
-	optbuf = (char*)&MSecVal;
-	optsize = sizeof(MSecVal);
-#else
 	struct timeval TimeVal;
 	TimeVal.tv_sec = m_timeout;
 	TimeVal.tv_usec = 0;
 	optbuf = (char*)&TimeVal;
 	optsize = sizeof(TimeVal);
-#endif
 	int err = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, optbuf, optsize);
 	if (err != 0)
 	{
@@ -763,13 +697,6 @@ bool Connection::ConnectWithTimeout(void* address, int address_len)
 	wset = rset;    //structure assignment ok
 
 	//set socket nonblocking flag
-#ifdef WIN32
-	u_long mode = 1;
-	if (ioctlsocket(m_socket, FIONBIO, &mode) != 0)
-	{
-		return false;
-	}
-#else
 	flags = fcntl(m_socket, F_GETFL, 0);
 	if (flags < 0)
 	{
@@ -780,18 +707,13 @@ bool Connection::ConnectWithTimeout(void* address, int address_len)
 	{
 		return false;
 	}
-#endif
 
 	//initiate non-blocking connect
 	ret = connect(m_socket, (struct sockaddr*)address, address_len);
 	if (ret < 0)
 	{
 		int err = GetLastNetworkError();
-#ifdef WIN32
-		if (err != WSAEWOULDBLOCK)
-#else
 		if (err != EINPROGRESS)
-#endif
 		{
 			return false;
 		}
@@ -809,11 +731,7 @@ bool Connection::ConnectWithTimeout(void* address, int address_len)
 		if (ret == 0)
 		{
 			//we had a timeout
-#ifdef WIN32
-			WSASetLastError(WSAETIMEDOUT);
-#else
 			errno = ETIMEDOUT;
-#endif
 			return false;
 		}
 
@@ -837,18 +755,10 @@ bool Connection::ConnectWithTimeout(void* address, int address_len)
 	}
 
 	//put socket back in blocking mode
-#ifdef WIN32
-	mode = 0;
-	if (ioctlsocket(m_socket, FIONBIO, &mode) != 0)
-	{
-		return false;
-	}
-#else
 	if (fcntl(m_socket, F_SETFL, flags) < 0)
 	{
 		return false;
 	}
-#endif
 
 	return true;
 }
@@ -862,7 +772,6 @@ void Connection::DoDisconnect()
 #ifndef DISABLE_TLS
 		CloseTls();
 #endif
-#ifndef WIN32
 		int is_listening;
 		socklen_t len = sizeof(is_listening);
 		if (!m_host.empty() && m_host.front() == '/'
@@ -870,7 +779,6 @@ void Connection::DoDisconnect()
 		{
 			unlink(m_host.c_str());
 		}
-#endif
 		if (m_gracefull)
 		{
 			closesocket_gracefully(m_socket);
@@ -915,11 +823,7 @@ void Connection::Cancel()
 
 int Connection::GetLastNetworkError()
 {
-#ifdef WIN32
-	return WSAGetLastError();
-#else
 	return errno;
-#endif
 }
 
 void Connection::ReportError(const char* msgPrefix, const char* msgArg, bool printErrCode, int errCode, const char* errMsg)
@@ -948,12 +852,7 @@ void Connection::ReportError(const char* msgPrefix, const char* msgArg, bool pri
 		}
 		else
 		{
-#ifdef WIN32
-			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, errCode, 0, printErrMsg, printErrMsg.Capacity(), nullptr);
-			printErrMsg[1024-1] = '\0';
-#else
 			printErrMsg = strerror(errCode);
-#endif
 		}
 
 		if (m_suppressErrors)
@@ -1092,12 +991,10 @@ in_addr_t Connection::ResolveHostAddr(const char* host)
 
 const char* Connection::GetRemoteAddr()
 {
-#ifndef WIN32
 	if (!m_host.empty() && m_host.front() == '/')
 	{
 		return "-";
 	}
-#endif
 
 	m_remoteAddr.Clear();
 
@@ -1105,33 +1002,11 @@ const char* Connection::GetRemoteAddr()
 	int peerNameLength = sizeof(peerName);
 	if (getpeername(m_socket, (sockaddr*)&peerName, (SOCKLEN_T*)&peerNameLength) >= 0)
 	{
-#ifdef WIN32
-		HMODULE module = LoadLibrary("ws2_32.dll");
-		if (module)
-		{
-			using inet_ntop_t = PCTSTR WSAAPI (INT Family, PVOID pAddr, PTSTR pStringBuf, size_t StringBufSize);
-			inet_ntop_t* inet_ntop = (inet_ntop_t*)GetProcAddress(module, "inet_ntop");
-			if (inet_ntop)
-			{
-				inet_ntop(((sockaddr_in*)&peerName)->sin_family,
-					((sockaddr_in*)&peerName)->sin_family == AF_INET6 ?
-					(void*)&((sockaddr_in6*)&peerName)->sin6_addr :
-					(void*)&((sockaddr_in*)&peerName)->sin_addr,
-					m_remoteAddr, m_remoteAddr.Capacity());
-			}
-			FreeLibrary(module);
-		}
-		if (m_remoteAddr.Empty())
-		{
-			m_remoteAddr = inet_ntoa(((sockaddr_in*)&peerName)->sin_addr);
-		}
-#else
 		inet_ntop(((sockaddr_in*)&peerName)->sin_family,
 			((sockaddr_in*)&peerName)->sin_family == AF_INET6 ?
 			(void*)&((sockaddr_in6*)&peerName)->sin6_addr :
 			(void*)&((sockaddr_in*)&peerName)->sin_addr,
 			m_remoteAddr, m_remoteAddr.Capacity());
-#endif
 		m_remoteAddr[m_remoteAddr.Capacity() - 1] = '\0';
 	}
 
@@ -1144,211 +1019,3 @@ int Connection::FetchTotalBytesRead()
 	m_totalBytesRead = 0;
 	return total;
 }
-
-
-#ifdef ANDROID_RESOLVE
-
-//******************************************************************************
-// Android resolver proxy from AOSP (reworked):
-// https://github.com/aosp-mirror/platform_bionic/blob/6c1d23f059986e4ee6f52c44a4944089aae9181d/libc/dns/net/gethnamaddr.c
-
-#define	MAXALIASES	35
-#define	MAXADDRS	35
-#define ALIGNBYTES (sizeof(uintptr_t) - 1)
-#define ALIGN(p) (((uintptr_t)(p) + ALIGNBYTES) &~ ALIGNBYTES)
-
-// This should be synchronized to ResponseCode.h
-static const int DnsProxyQueryResult = 222;
-
-FILE* android_open_proxy()
-{
-	const char* cache_mode = getenv("ANDROID_DNS_MODE");
-	bool use_proxy = (cache_mode == nullptr || strcmp(cache_mode, "local") != 0);
-	if (!use_proxy) {
-		return nullptr;
-	}
-
-	int s = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-	if (s == -1) {
-		return nullptr;
-	}
-
-	const int one = 1;
-	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
-	struct sockaddr_un proxy_addr;
-	memset(&proxy_addr, 0, sizeof(proxy_addr));
-	proxy_addr.sun_family = AF_UNIX;
-	strncpy(proxy_addr.sun_path, "/dev/socket/dnsproxyd", sizeof(proxy_addr.sun_path));
-
-	if (connect(s, (const struct sockaddr*) &proxy_addr, sizeof(proxy_addr)) != 0) {
-		close(s);
-		return nullptr;
-	}
-
-	return fdopen(s, "r+");
-}
-
-static struct hostent * android_read_hostent(FILE* proxy, struct hostent* hp, char* hbuf, size_t hbuflen)
-{
-	uint32_t size;
-	char buf[4];
-	if (fread(buf, 1, sizeof(buf), proxy) != sizeof(buf)) return nullptr;
-
-	// This is reading serialized data from system/netd/server/DnsProxyListener.cpp
-	// and changes here need to be matched there.
-	int result_code = strtol(buf, nullptr, 10);
-	if (result_code != DnsProxyQueryResult) {
-		fread(&size, 1, sizeof(size), proxy);
-		return nullptr;
-	}
-
-	if (fread(&size, 1, sizeof(size), proxy) != sizeof(size)) return nullptr;
-	size = ntohl(size);
-
-	memset(hp, 0, sizeof(*hp));
-	char *ptr = hbuf;
-	char *hbuf_end = hbuf + hbuflen;
-
-	if (ptr + size > hbuf_end) {
-		return nullptr;
-	}
-	if (fread(ptr, 1, size, proxy) != size) return nullptr;
-	hp->h_name = ptr;
-	ptr += size;
-
-	char *aliases_ptrs[MAXALIASES];
-	char **aliases = &aliases_ptrs[0];
-
-	while (1) {
-		if (fread(&size, 1, sizeof(size), proxy) != sizeof(size)) return nullptr;
-		size = ntohl(size);
-
-		if (size == 0) {
-			*aliases = nullptr;
-			break;
-		}
-		if (ptr + size > hbuf_end) {
-			return nullptr;
-		}
-		if (fread(ptr, 1, size, proxy) != size) return nullptr;
-		if (aliases < &aliases_ptrs[MAXALIASES - 1]) {
-		  *aliases++ = ptr;
-		}
-		ptr += size;
-	}
-
-	// Fix alignment after variable-length data.
-	ptr = (char*)ALIGN(ptr);
-
-	int aliases_len = ((int)(aliases - aliases_ptrs) + 1) * sizeof(*hp->h_aliases);
-	if (ptr + aliases_len > hbuf_end) {
-		return nullptr;
-	}
-	hp->h_aliases = (char**)ptr;
-	memcpy(ptr, aliases_ptrs, aliases_len);
-	ptr += aliases_len;
-
-	if (fread(&size, 1, sizeof(size), proxy) != sizeof(size)) return nullptr;
-	hp->h_addrtype = ntohl(size);
-
-	if (fread(&size, 1, sizeof(size), proxy) != sizeof(size)) return nullptr;
-	hp->h_length = ntohl(size);
-
-	char *addr_ptrs[MAXADDRS];
-	char **addr_p = &addr_ptrs[0];
-
-	while (1) {
-		if (fread(&size, 1, sizeof(size), proxy) != sizeof(size)) return nullptr;
-		size = ntohl(size);
-		if (size == 0) {
-			*addr_p = nullptr;
-			break;
-		}
-		if (ptr + size > hbuf_end) {
-			return nullptr;
-		}
-		if (fread(ptr, 1, size, proxy) != size) return nullptr;
-		if (addr_p < &addr_ptrs[MAXADDRS - 1]) {
-		  *addr_p++ = ptr;
-		}
-		ptr += size;
-	}
-
-	// Fix alignment after variable-length data.
-	ptr = (char*)ALIGN(ptr);
-
-	int addrs_len = ((int)(addr_p - addr_ptrs) + 1) * sizeof(*hp->h_addr_list);
-	if (ptr + addrs_len > hbuf_end) {
-		return nullptr;
-	}
-	hp->h_addr_list = (char**)ptr;
-	memcpy(ptr, addr_ptrs, addrs_len);
-	return hp;
-}
-
-// very similar in proxy-ness to android_getaddrinfo_proxy
-static struct hostent * android_gethostbyname_internal(const char *name, int af,
-	struct hostent *hp, char *hbuf, size_t hbuflen)
-{
-	FILE* proxy = android_open_proxy();
-	if (proxy == nullptr) {
-		return nullptr;
-	}
-
-	// This is writing to system/netd/server/DnsProxyListener.cpp and changes
-	// here need to be matched there.
-	if (fprintf(proxy, "gethostbyname %s %s %d",
-			"^",
-			name == nullptr ? "^" : name,
-			af) < 0) {
-		fclose(proxy);
-		return nullptr;
-	}
-
-	if (fputc(0, proxy) == EOF || fflush(proxy) != 0) {
-		fclose(proxy);
-		return nullptr;
-	}
-
-	struct hostent* result = android_read_hostent(proxy, hp, hbuf, hbuflen);
-	fclose(proxy);
-	return result;
-}
-
-std::string ResolveAndroidHost(const char* host)
-{
-	debug("ResolveAndroidHost");
-
-	bool android = FileSystem::DirectoryExists("/data/dalvik-cache");
-	if (!android)
-	{
-		debug("Not android");
-		return "";
-	}
-
-	struct hostent hinfobuf;
-	char strbuf[1024];
-
-	struct hostent* hinfo = android_gethostbyname_internal(host, AF_INET, &hinfobuf, strbuf, sizeof(strbuf));
-	if (hinfo == nullptr)
-	{
-		// trying IPv6
-		hinfo = android_gethostbyname_internal(host, AF_INET6, &hinfobuf, strbuf, sizeof(strbuf));
-	}
-
-	if (hinfo == nullptr)
-	{
-		debug("android_gethostbyname_r failed");
-		return "";
-	}
-
-	std::string result;
-	result.reserve(1024);
-	inet_ntop(hinfo->h_addrtype, hinfo->h_addr_list[0], result.data(), result.size());
-
-	debug("android_gethostbyname_r returned %s", result.c_str());
-	return result;
-}
-
-#endif

@@ -2,10 +2,6 @@ find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 set(TESTS_TARGET nzbget_tests)
 set(TESTS_SRC ${CMAKE_SOURCE_DIR}/tests/main.cpp ${SRC})
-if(WIN32)
-	list(APPEND TESTS_SRC ${CMAKE_SOURCE_DIR}/daemon/util/Utf8.cpp)
-endif()
-
 include(util/util.cmake)
 include(feed/feed.cmake)
 include(queue/queue.cmake)

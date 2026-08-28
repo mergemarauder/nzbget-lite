@@ -29,12 +29,6 @@
 #include "Json.h"
 #include "Xml.h"
 
-#ifdef HAVE_NCURSES_H
-#include <ncurses.h>
-#endif
-#ifdef HAVE_NCURSES_NCURSES_H
-#include <ncurses/ncurses.h>
-#endif
 #ifndef DISABLE_PARCHECK
 #include <par2/version.h>
 #endif
@@ -59,9 +53,6 @@ namespace System
 		m_libraries.reserve(5);
 		m_libraries.push_back({ "LibXML2", LIBXML_DOTTED_VERSION });
 
-#if defined(HAVE_NCURSES_H) || defined(HAVE_NCURSES_NCURSES_H)
-		m_libraries.push_back({ "ncurses", NCURSES_VERSION });
-#endif
 
 #ifndef DISABLE_GZIP
 		m_libraries.push_back({ "Gzip", ZLIB_VERSION });

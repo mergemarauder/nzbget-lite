@@ -58,39 +58,6 @@ private:
 	const Options& m_options;
 };
 
-class CursesNzbNameValidator final : public Validator
-{
-public:
-	explicit CursesNzbNameValidator(const Options& options) : m_options(options) {}
-	std::string_view GetName() const override { return Options::CURSESNZBNAME; }
-	Status Validate() const override;
-
-private:
-	const Options& m_options;
-};
-
-class CursesGroupValidator final : public Validator
-{
-public:
-	explicit CursesGroupValidator(const Options& options) : m_options(options) {}
-	std::string_view GetName() const override { return Options::CURSESGROUP; }
-	Status Validate() const override;
-
-private:
-	const Options& m_options;
-};
-
-class CursesTimeValidator final : public Validator
-{
-public:
-	explicit CursesTimeValidator(const Options& options) : m_options(options) {}
-	std::string_view GetName() const override { return Options::CURSESTIME; }
-	Status Validate() const override;
-
-private:
-	const Options& m_options;
-};
-
 }  // namespace SystemHealth::Display
 
 #endif

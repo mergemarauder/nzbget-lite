@@ -29,12 +29,11 @@ namespace SystemHealth::Feeds
 FeedValidator::FeedValidator(const FeedInfo& feed, const Options& options)
 	: m_feed(feed), m_options(options), m_name("Feed" + std::to_string(feed.GetId()))
 {
-	m_validators.reserve(7);
+	m_validators.reserve(6);
 	m_validators.push_back(std::make_unique<NameValidator>(feed));
 	m_validators.push_back(std::make_unique<UrlValidator>(feed));
 	m_validators.push_back(std::make_unique<IntervalValidator>(feed));
 	m_validators.push_back(std::make_unique<FilterValidator>(feed));
-	m_validators.push_back(std::make_unique<ScriptsValidator>(feed));
 	m_validators.push_back(std::make_unique<CategoryValidator>(feed, options));
 	m_validators.push_back(std::make_unique<FeedCertValidator>(feed));
 }
@@ -81,8 +80,6 @@ Status IntervalValidator::Validate() const
 }
 
 Status FilterValidator::Validate() const { return Status::Ok(); }
-
-Status ScriptsValidator::Validate() const { return Status::Ok(); }
 
 Status CategoryValidator::Validate() const
 {

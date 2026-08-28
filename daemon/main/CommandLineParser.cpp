@@ -327,39 +327,6 @@ void CommandLineParser::InitCommandLine(int argc, const char* const_argv[])
 				{
 					m_testBacktrace = true;
 				}
-				else if (!strcasecmp(optarg, "webget"))
-				{
-					m_webGet = true;
-					optind++;
-					if (optind > argc)
-					{
-						ReportError("Could not parse value of option 'B'");
-						return;
-					}
-					optarg = argv[optind-1];
-					m_webGetFilename = optarg;
-				}
-				else if (!strcasecmp(optarg, "verify"))
-				{
-					m_sigVerify = true;
-					optind++;
-					if (optind > argc)
-					{
-						ReportError("Could not parse value of option 'B'");
-						return;
-					}
-					optarg = argv[optind-1];
-					m_pubKeyFilename = optarg;
-
-					optind++;
-					if (optind > argc)
-					{
-						ReportError("Could not parse value of option 'B'");
-						return;
-					}
-					optarg = argv[optind-1];
-					m_sigFilename = optarg;
-				}
 				else
 				{
 					ReportError("Could not parse value of option 'B'");
@@ -717,9 +684,7 @@ void CommandLineParser::PrintUsage(const char* com)
 		"  -p, --printconfig         Print configuration and exit\n"
 		"  -o, --option <name=value> Set or override option in configuration-file\n"
 		"  -s, --server              Start nzbget as a server in console-mode\n"
-#ifndef WIN32
 		"  -D, --daemon              Start nzbget as a server in daemon-mode\n"
-#endif
 		"  -V, --serverversion       Print server's version and exit\n"
 		"  -Q, --quit                Shutdown server\n"
 		"  -O, --reload              Reload config and restart all services\n"
@@ -852,9 +817,6 @@ void CommandLineParser::InitFileArg(int argc, const char* argv[])
 		// If the path starts with '/' its an absolute, else relative
 		const char* fileName = argv[optind];
 
-#ifdef WIN32
-		m_argFilename = fileName;
-#else
 		if (fileName[0] == '/' || !strncasecmp(fileName, "http://", 6) || !strncasecmp(fileName, "https://", 7))
 		{
 			m_argFilename = fileName;
@@ -866,7 +828,6 @@ void CommandLineParser::InitFileArg(int argc, const char* argv[])
 			getcwd(m_argFilename, 1024);
 			m_argFilename.AppendFmt("/%s", fileName);
 		}
-#endif
 
 		if (m_serverMode || m_remoteClientMode ||
 				!(m_clientOperation == opClientNoOperation ||

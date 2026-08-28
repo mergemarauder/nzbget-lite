@@ -35,7 +35,6 @@
 #include "Scanner.h"
 #include "FeedCoordinator.h"
 #include "Service.h"
-#include "Maintenance.h"
 #include "ArticleWriter.h"
 #include "StatMeter.h"
 #include "SystemInfo.h"
@@ -58,16 +57,11 @@ DupeCoordinator* g_DupeCoordinator;
 DiskState* g_DiskState;
 Scanner* g_Scanner;
 FeedCoordinator* g_FeedCoordinator;
-Maintenance* g_Maintenance;
 ArticleCache* g_ArticleCache;
 ServiceCoordinator* g_ServiceCoordinator;
 System::SystemInfo* g_SystemInfo;
 SystemHealth::Service* g_SystemHealth;
 
-#ifdef _WIN32
-#include "WinConsole.h"
-WinConsole* g_WinConsole;
-#endif
 
 void Reload(){}
 void ExitProc(){}
@@ -94,9 +88,6 @@ struct InitGlobals
 		g_ServerPool = new ServerPool();
 		g_ServiceCoordinator = new ServiceCoordinator();
 		g_Scanner = new Scanner();
-#ifdef _WIN32
-		WinConsole* g_WinConsole = new WinConsole();
-#endif
 	}
 
 	~InitGlobals()
@@ -108,9 +99,6 @@ struct InitGlobals
 		delete g_DiskState;
 		delete g_Scanner;
 		delete g_ServiceCoordinator;
-#ifdef _WIN32
-		delete g_WinConsole;
-#endif
 	}
 };
 

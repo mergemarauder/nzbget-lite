@@ -35,8 +35,6 @@ public:
 		scPausePostProcess,
 		scUnpausePostProcess,
 		scDownloadRate,
-		scExtensions,
-		scProcess,
 		scPauseScan,
 		scUnpauseScan,
 		scActivateServer,

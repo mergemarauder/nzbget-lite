@@ -63,68 +63,6 @@ namespace System
 		return arch;
 	}
 
-#ifdef WIN32
-	void CPU::Init()
-	{
-		auto result = GetCPUModel();
-		if (result.has_value())
-		{
-			m_model = std::move(result.value());
-		}
-		else
-		{
-			detail("Failed to get CPU model. Couldn't read Windows Registry");
-		}
-
-		result = GetCPUArch();
-		if (result.has_value())
-		{
-			m_arch = std::move(result.value());
-		}
-		else
-		{
-			detail("Failed to get CPU arch. Couldn't read Windows Registry");
-		}
-	}
-
-	std::optional<std::string> CPU::GetCPUModel() const
-	{
-		int len = BUFFER_SIZE;
-		char buffer[BUFFER_SIZE];
-		if (Util::RegReadStr(
-			HKEY_LOCAL_MACHINE,
-			"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-			"ProcessorNameString",
-			buffer,
-			&len))
-		{
-			std::string model{ buffer };
-			Util::Trim(model);
-			return model;
-		}
-
-		return std::nullopt;
-	}
-
-	std::optional<std::string> CPU::GetCPUArch() const
-	{
-		int len = BUFFER_SIZE;
-		char buffer[BUFFER_SIZE];
-		if (Util::RegReadStr(
-			HKEY_LOCAL_MACHINE,
-			"SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment",
-			"PROCESSOR_ARCHITECTURE",
-			buffer,
-			&len))
-		{
-			std::string arch{ buffer };
-			Util::Trim(arch);
-			return GetCanonicalCPUArch(arch);
-		}
-
-		return std::nullopt;
-	}
-#endif	
 
 #ifdef __linux__
 #include <fstream>
@@ -201,58 +139,8 @@ namespace System
 	}
 #endif
 
-#if __BSD__
-	void CPU::Init()
-	{
-		int mib[2];
-		size_t len = BUFFER_SIZE;
-		char model[BUFFER_SIZE];
 
-		mib[0] = CTL_HW;
-		mib[1] = HW_MODEL;
-		if (sysctl(mib, 2, model, &len, nullptr, 0) != -1)
-		{
-			m_model = model;
-			Util::Trim(m_model);
-		}
-		else
-		{
-			detail("Failed to get CPU model. Couldn't read 'hw.model'");
-		}
 
-		auto result = GetCPUArch();
-		if (result.has_value())
-		{
-			m_arch = std::move(result.value());
-		}
-	}
-
-#endif
-
-#ifdef __APPLE__
-	void CPU::Init()
-	{
-		size_t len = BUFFER_SIZE;
-		char buffer[BUFFER_SIZE];
-		if (sysctlbyname("machdep.cpu.brand_string", &buffer, &len, nullptr, 0) == 0)
-		{
-			m_model = buffer;
-			Util::Trim(m_model);
-		}
-		else
-		{
-			detail("Failed to get CPU model. Couldn't read 'machdep.cpu.brand_string'");
-		}
-
-		auto result = GetCPUArch();
-		if (result.has_value())
-		{
-			m_arch = std::move(result.value());
-		}
-	}
-#endif
-
-#ifndef WIN32
 	std::optional<std::string> CPU::GetCPUArch() const
 	{
 		auto res = Util::Uname("-m");
@@ -265,5 +153,4 @@ namespace System
 
 		return GetCanonicalCPUArch(res.value());
 	}
-#endif
 }

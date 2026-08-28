@@ -30,7 +30,6 @@
 #include "CommandLineParser.h"
 #include "Thread.h"
 #include "ColoredFrontend.h"
-#include "NCursesFrontend.h"
 #include "QueueCoordinator.h"
 #include "UrlCoordinator.h"
 #include "RemoteServer.h"
@@ -46,7 +45,7 @@
 #include "FeedCoordinator.h"
 #include "Service.h"
 #include "DiskService.h"
-#include "Maintenance.h"
+#include "ScriptController.h"
 #include "ArticleWriter.h"
 #include "StatMeter.h"
 #include "Util.h"
@@ -55,12 +54,6 @@
 #include "SystemInfo.h"
 #include "SystemHealth.h"
 
-#ifdef WIN32
-#include "WinService.h"
-#include "WinConsole.h"
-#include "WebDownloader.h"
-#include "Utf8.h"
-#endif
 #ifndef DISABLE_NSERV
 #include "NServMain.h"
 #endif
@@ -89,15 +82,11 @@ DupeCoordinator* g_DupeCoordinator;
 DiskState* g_DiskState;
 Scanner* g_Scanner;
 FeedCoordinator* g_FeedCoordinator;
-Maintenance* g_Maintenance;
 ArticleCache* g_ArticleCache;
 ServiceCoordinator* g_ServiceCoordinator;
 System::SystemInfo* g_SystemInfo;
 SystemHealth::Service* g_SystemHealth;
 
-#ifdef WIN32
-WinConsole* g_WinConsole;
-#endif
 
 int g_ArgumentCount;
 char* (*g_EnvironmentVariables)[] = nullptr;
@@ -108,19 +97,6 @@ char* (*g_Arguments)[] = nullptr;
  */
 int main(int argc, char *argv[], char *argp[])
 {
-#ifdef WIN32
-#ifdef _DEBUG
-	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-	_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF
-#ifdef DEBUG_CRTMEMLEAKS
-		| _CRTDBG_CHECK_CRT_DF | _CRTDBG_CHECK_ALWAYS_DF
-#endif
-		);
-#endif
-
-	SetConsoleOutputCP(CP_UTF8);
-#endif
 
 	setlocale(LC_CTYPE, "");
 
@@ -142,23 +118,9 @@ int main(int argc, char *argv[], char *argp[])
 #endif
 	}
 
-#ifdef WIN32
-	InstallUninstallServiceCheck(argc, argv);
-#endif
 
 	srand((unsigned int)Util::CurrentTime());
 
-#ifdef WIN32
-	for (int i=0; i < argc; i++)
-	{
-		if (!strcmp(argv[i], "-D"))
-		{
-			AllocConsole(); // needed for sending CTRL+BREAK signal to child processes
-			StartService(RunMain);
-			return 0;
-		}
-	}
-#endif
 
 	RunMain();
 
@@ -181,13 +143,10 @@ public:
 		int level, int group, bool optional, unsigned int certVerificationfLevel) override;
 	void AddFeed(int id, const char* name, const char* url, int interval,
 		const char* filter, bool backlog, bool pauseNzb, const char* category,
-		FeedInfo::CategorySource categorySource, int priority, const char* feedScript,
+		FeedInfo::CategorySource categorySource, int priority,
 		unsigned int certVerifLevel) override;
 	void AddTask(int id, int hours, int minutes, int weekDaysBits,
 		Options::ESchedulerCommand command, const char* param) override;
-#ifdef WIN32
-	void SetupFirstStart() override;
-#endif
 
 private:
 	// globals
@@ -204,15 +163,11 @@ private:
 	std::unique_ptr<DiskState> m_diskState;
 	std::unique_ptr<Scanner> m_scanner;
 	std::unique_ptr<FeedCoordinator> m_feedCoordinator;
-	std::unique_ptr<Maintenance> m_maintenance;
 	std::unique_ptr<ArticleCache> m_articleCache;
 	std::unique_ptr<ServiceCoordinator> m_serviceCoordinator;
 	std::unique_ptr<System::SystemInfo> m_systemInfo;
 	std::unique_ptr<SystemHealth::Service> m_systemHealth;
 
-#ifdef WIN32
-	std::unique_ptr<WinConsole> m_winConsole;
-#endif
 
 	// non-globals
 	std::unique_ptr<Thread> m_frontend;
@@ -236,17 +191,13 @@ private:
 	void PrintOptions();
 	void ProcessDirect();
 	void ProcessClientRequest();
-	void ProcessWebGet();
-	void ProcessSigVerify();
 	void StartRemoteServer();
 	void StopRemoteServer();
 	void StartFrontend();
 	void StopFrontend();
 	void ProcessStandalone();
 	void DoMainLoop();
-#ifndef WIN32
 	void Daemonize();
-#endif
 };
 
 std::unique_ptr<NZBGet> g_NZBGet;
@@ -272,9 +223,6 @@ void NZBGet::Init()
 
 	CreateGlobals();
 
-#ifdef WIN32
-	m_winConsole->InitAppMode();
-#endif
 
 	BootConfig();
 
@@ -292,7 +240,6 @@ void NZBGet::Init()
 		SystemHealth::Log(report);
 	}
 
-#ifndef WIN32
 	mode_t uMask = static_cast<mode_t>(m_options->GetUMask());
 	if (uMask < 01000)
 	{
@@ -310,7 +257,6 @@ void NZBGet::Init()
 	debug("Using %o umask", FileSystem::uMask);
 #endif
 
-#endif
 
 	m_scanner->InitOptions();
 #ifndef DISABLE_TLS
@@ -319,15 +265,11 @@ void NZBGet::Init()
 
 	if (m_commandLineParser->GetDaemonMode())
 	{
-#ifdef WIN32
-		info("nzbget %s service-mode", Util::VersionRevision());
-#else
 		if (!m_reloading)
 		{
 			Daemonize();
 		}
 		info("nzbget %s daemon-mode", Util::VersionRevision());
-#endif
 	}
 	else if (m_options->GetServerMode())
 	{
@@ -375,10 +317,6 @@ void NZBGet::Final()
 
 void NZBGet::CreateGlobals()
 {
-#ifdef WIN32
-	m_winConsole = std::make_unique<WinConsole>();
-	g_WinConsole = m_winConsole.get();
-#endif
 
 	m_workState = std::make_unique<WorkState>();
 	g_WorkState = m_workState.get();
@@ -415,9 +353,6 @@ void NZBGet::CreateGlobals()
 
 	m_articleCache = std::make_unique<ArticleCache>();
 	g_ArticleCache = m_articleCache.get();
-
-	m_maintenance = std::make_unique<Maintenance>();
-	g_Maintenance = m_maintenance.get();
 
 	m_diskState = std::make_unique<DiskState>();
 	g_DiskState = m_diskState.get();
@@ -493,12 +428,8 @@ void NZBGet::Cleanup()
 	g_ServerPool = nullptr;
 	g_FeedCoordinator = nullptr;
 	g_ArticleCache = nullptr;
-	g_Maintenance = nullptr;
 	g_StatMeter = nullptr;
 
-#ifdef WIN32
-	g_WinConsole = nullptr;
-#endif
 }
 
 void NZBGet::ProcessDirect()
@@ -509,16 +440,6 @@ void NZBGet::ProcessDirect()
 		TestSegFault(); // never returns
 	}
 #endif
-
-	if (m_commandLineParser->GetWebGet())
-	{
-		ProcessWebGet(); // never returns
-	}
-
-	if (m_commandLineParser->GetSigVerify())
-	{
-		ProcessSigVerify(); // never returns
-	}
 
 	// client request
 	if (m_commandLineParser->GetClientOperation() != CommandLineParser::opClientNoOperation)
@@ -539,14 +460,11 @@ void NZBGet::StartRemoteServer()
 		return;
 	}
 
-	WebProcessor::Init();
 	m_remoteServer = std::make_unique<RemoteServer>(false);
 	m_remoteServer->Start();
 
 	if (m_options->GetSecureControl()
-#ifndef WIN32
 		&& !(m_options->GetControlIp() && m_options->GetControlIp()[0] == '/')
-#endif
 )
 	{
 		m_remoteSecureServer = std::make_unique<RemoteServer>(true);
@@ -617,12 +535,6 @@ void NZBGet::StartFrontend()
 	{
 		switch (m_options->GetOutputMode())
 		{
-		case Options::omNCurses:
-#ifndef DISABLE_CURSES
-			m_frontend = std::make_unique<NCursesFrontend>();
-			break;
-#endif
-
 		case Options::omColored:
 			m_frontend = std::make_unique<ColoredFrontend>();
 			break;
@@ -681,9 +593,6 @@ void NZBGet::DoMainLoop()
 {
 	debug("Entering main program loop");
 
-#ifdef WIN32
-	m_winConsole->Start();
-#endif
 	m_queueCoordinator->Start();
 	m_urlCoordinator->Start();
 	m_prePostProcessor->Start();
@@ -700,9 +609,6 @@ void NZBGet::DoMainLoop()
 		m_prePostProcessor->IsRunning() ||
 		m_feedCoordinator->IsRunning() ||
 		m_serviceCoordinator->IsRunning() ||
-#ifdef WIN32
-		m_winConsole->IsRunning() ||
-#endif
 		m_articleCache->IsRunning())
 	{
 		if (!m_options->GetServerMode() &&
@@ -894,33 +800,6 @@ void NZBGet::ProcessClientRequest()
 	exit(ok ? 0 : 1);
 }
 
-void NZBGet::ProcessWebGet()
-{
-	WebDownloader downloader;
-	downloader.SetUrl(m_commandLineParser->GetLastArg());
-	downloader.SetForce(true);
-	downloader.SetRetry(false);
-	downloader.SetOutputFilename(m_commandLineParser->GetWebGetFilename());
-	downloader.SetInfoName("WebGet");
-
-	WebDownloader::EStatus status = downloader.DownloadWithRedirects(5);
-	bool ok = status == WebDownloader::adFinished;
-
-	exit(ok ? 0 : 1);
-}
-
-void NZBGet::ProcessSigVerify()
-{
-#ifndef DISABLE_TLS
-	bool ok = Maintenance::VerifySignature(m_commandLineParser->GetLastArg(),
-		m_commandLineParser->GetSigFilename(), m_commandLineParser->GetPubKeyFilename());
-	exit(ok ? 93 : 1);
-#else
-	printf("ERROR: Could not verify signature, the program was compiled without OpenSSL support\n");
-	exit(1);
-#endif
-}
-
 void NZBGet::Stop(bool reload)
 {
 	m_reloading = reload;
@@ -948,9 +827,6 @@ void NZBGet::Stop(bool reload)
 			m_prePostProcessor->Stop();
 			m_feedCoordinator->Stop();
 			m_articleCache->Stop();
-#ifdef WIN32
-			m_winConsole->Stop();
-#endif
 		}
 	}
 
@@ -969,7 +845,6 @@ void NZBGet::PrintOptions()
 	exit(0);
 }
 
-#ifndef WIN32
 void NZBGet::Daemonize()
 {
 	int f = fork();
@@ -1070,7 +945,6 @@ void NZBGet::Daemonize()
 	signal(SIGTTOU, SIG_IGN);
 	signal(SIGTTIN, SIG_IGN);
 }
-#endif
 
 void NZBGet::AddNewsServer(int id, bool active, const char* name, const char* host,
 	int port, int ipVersion, const char* user, const char* pass, bool joinGroup, bool tls,
@@ -1082,11 +956,11 @@ void NZBGet::AddNewsServer(int id, bool active, const char* name, const char* ho
 }
 
 void NZBGet::AddFeed(int id, const char* name, const char* url, int interval, const char* filter,
-	bool backlog, bool pauseNzb, const char* category, FeedInfo::CategorySource categorySource, int priority, const char* feedScript,
+	bool backlog, bool pauseNzb, const char* category, FeedInfo::CategorySource categorySource, int priority,
 	unsigned int certVeriflevel)
 {
 	m_feedCoordinator->AddFeed(std::make_unique<FeedInfo>(id, name, url, backlog, interval, filter,
-		pauseNzb, category, categorySource, priority, feedScript, certVeriflevel));
+		pauseNzb, category, categorySource, priority, certVeriflevel));
 }
 
 void NZBGet::AddTask(int id, int hours, int minutes, int weekDaysBits,
@@ -1096,12 +970,6 @@ void NZBGet::AddTask(int id, int hours, int minutes, int weekDaysBits,
 		(Scheduler::ECommand)command, param));
 }
 
-#ifdef WIN32
-void NZBGet::SetupFirstStart()
-{
-	m_winConsole->SetupFirstStart();
-}
-#endif
 
 void RunMain()
 {

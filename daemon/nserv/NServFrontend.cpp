@@ -24,9 +24,6 @@
 
 NServFrontend::NServFrontend()
 {
-#ifdef WIN32
-	m_console = GetStdHandle(STD_OUTPUT_HANDLE);
-#endif
 }
 
 void NServFrontend::Run()
@@ -71,49 +68,13 @@ void NServFrontend::BeforePrint()
 	if (m_needGoBack)
 	{
 		// go back one line
-#ifdef WIN32
-		CONSOLE_SCREEN_BUFFER_INFO BufInfo;
-		GetConsoleScreenBufferInfo(m_console, &BufInfo);
-		BufInfo.dwCursorPosition.Y--;
-		SetConsoleCursorPosition(m_console, BufInfo.dwCursorPosition);
-#else
 		printf("\r\033[1A");
-#endif
 		m_needGoBack = false;
 	}
 }
 
 void NServFrontend::PrintMessage(Message& message)
 {
-#ifdef WIN32
-	switch (message.GetKind())
-	{
-		case Message::mkDebug:
-			SetConsoleTextAttribute(m_console, 8);
-			printf("[DEBUG]  ");
-			break;
-		case Message::mkError:
-			SetConsoleTextAttribute(m_console, 4);
-			printf("[ERROR] ");
-			break;
-		case Message::mkWarning:
-			SetConsoleTextAttribute(m_console, 5);
-			printf("[WARNING]");
-			break;
-		case Message::mkInfo:
-			SetConsoleTextAttribute(m_console, 2);
-			printf("[INFO]  ");
-			break;
-		case Message::mkDetail:
-			SetConsoleTextAttribute(m_console, 2);
-			printf("[DETAIL]");
-			break;
-	}
-	SetConsoleTextAttribute(m_console, 7);
-	CString msg = message.GetText();
-	CharToOem(msg, msg);
-	printf(" %s\n", *msg);
-#else
 	const char* msg = message.GetText();
 	switch (message.GetKind())
 	{
@@ -133,14 +94,9 @@ void NServFrontend::PrintMessage(Message& message)
 			printf("\033[32m[DETAIL]\033[39m %s\033[K\n", msg);
 			break;
 	}
-#endif
 }
 
 void NServFrontend::PrintSkip()
 {
-#ifdef WIN32
-	printf(".....\n");
-#else
 	printf(".....\033[K\n");
-#endif
 }

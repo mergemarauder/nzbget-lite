@@ -95,11 +95,6 @@ public:
 	int GetLogLines() { return m_logLines; }
 	int GetWriteLogKind() { return m_writeLogKind; }
 	bool GetTestBacktrace() { return m_testBacktrace; }
-	bool GetWebGet() { return m_webGet; }
-	const char* GetWebGetFilename() { return m_webGetFilename; }
-	bool GetSigVerify() { return m_sigVerify; }
-	const char* GetPubKeyFilename() { return m_pubKeyFilename; }
-	const char* GetSigFilename() { return m_sigFilename; }
 	bool GetPrintOptions() { return m_printOptions; }
 	bool GetPrintVersion() { return m_printVersion; }
 	bool GetPrintUsage() { return m_printUsage; }
@@ -146,11 +141,6 @@ private:
 	int m_logLines = 0;
 	int m_writeLogKind = 0;
 	bool m_testBacktrace = false;
-	bool m_webGet = false;
-	CString m_webGetFilename;
-	bool m_sigVerify = false;
-	CString m_pubKeyFilename;
-	CString m_sigFilename;
 	bool m_pauseDownload = false;
 
 	void InitCommandLine(int argc, const char* argv[]);

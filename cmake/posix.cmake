@@ -2,7 +2,6 @@ option(ENABLE_STATIC "Build static executable")
 option(ENABLE_TESTS "Build tests")
 option(ENABLE_CLANG_TIDY "Enable Clang-Tidy static analyzer")
 option(DISABLE_TLS "Disable TLS")
-option(DISABLE_CURSES "Disable curses")
 option(DISABLE_GZIP "Disable gzip")
 option(DISABLE_PARCHECK "Disable parcheck")
 
@@ -15,7 +14,6 @@ message(STATUS "  BUILD TYPE:        ${CMAKE_BUILD_TYPE}")
 message(STATUS "  ENABLE STATIC:     ${ENABLE_STATIC}")
 message(STATUS "  ENABLE TESTS:      ${ENABLE_TESTS}")
 message(STATUS "  DISABLE TLS:       ${DISABLE_TLS}")
-message(STATUS "  DISABLE CURSES:    ${DISABLE_CURSES}")
 message(STATUS "  DISABLE GZIP:      ${DISABLE_GZIP}")
 message(STATUS "  DISABLE PARCHECK:  ${DISABLE_PARCHECK}")
 message(STATUS "  USE SANITIZERS:    ${USE_SANITIZERS}")
@@ -47,14 +45,6 @@ else()
 		find_package(OpenSSL REQUIRED)
 		set(LIBS ${LIBS} OpenSSL::SSL OpenSSL::Crypto)
 		set(INCLUDES ${INCLUDES} ${OPENSSL_INCLUDE_DIR})
-	endif()
-
-	if(NOT DISABLE_CURSES)
-		set(CURSES_NEED_NCURSES TRUE)
-		set(CURSES_NEED_WIDE TRUE)
-		find_package(Curses REQUIRED)
-		set(INCLUDES ${INCLUDES} ${CURSES_INCLUDE_DIRS})
-		set(LIBS ${LIBS} ${CURSES_LIBRARIES})
 	endif()
 
 	if(NOT DISABLE_GZIP)
@@ -94,9 +84,7 @@ if(NOT HAVE_SYSTEM_REGEX_H)
 endif()
 
 # Large File Support (LFS)
-if (NOT TOOLCHAIN_PREFIX MATCHES "android")
-	add_compile_definitions(_FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE _LARGE_FILES)
-endif()
+add_compile_definitions(_FILE_OFFSET_BITS=64 _LARGEFILE_SOURCE _LARGE_FILES)
 
 check_include_files(sys/prctl.h HAVE_SYS_PRCTL_H)
 check_include_files(regex.h HAVE_REGEX_H)
@@ -126,10 +114,6 @@ check_function_exists(getopt_long HAVE_GETOPT_LONG)
 check_function_exists(fdatasync HAVE_FDATASYNC)
 
 set(SIGCHLD_HANDLER 1)
-
-if(NOT DISABLE_CURSES)
-	set(HAVE_NCURSES_H 1)
-endif()
 
 # check ctime_r
 check_cxx_source_compiles("

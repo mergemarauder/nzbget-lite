@@ -74,7 +74,7 @@ Status LogBufferValidator::Validate() const
 
 	if (m_options.GetLogBuffer() < 100)
 		return Status::Info("'" + std::string(Options::LOGBUFFER) +
-							"' is very low. You might miss recent messages in the web UI");
+							"' is very low. API clients might miss recent messages");
 	return Status::Ok();
 }
 

@@ -36,14 +36,11 @@ PathsValidator::PathsValidator(const Options& options, const ::Log& log)
 	m_validators.push_back(std::make_unique<NzbDirValidator>(options));
 	m_validators.push_back(std::make_unique<QueueDirValidator>(options));
 	m_validators.push_back(std::make_unique<TempDirValidator>(options));
-	m_validators.push_back(std::make_unique<ScriptDirValidator>(options));
 	m_validators.push_back(std::make_unique<ConfigTemplateValidator>(options));
 	m_validators.push_back(std::make_unique<LogFileValidator>(options, log));
 	m_validators.push_back(std::make_unique<CertStoreValidator>(options, log));
 	m_validators.push_back(std::make_unique<RequiredDirValidator>(options));
-#ifndef _WIN32
 	m_validators.push_back(std::make_unique<LockFileValidator>(options, log));
-#endif
 }
 
 Status MainDirValidator::Validate() const { return Validate(m_options.GetMainDirPath()); }
@@ -158,44 +155,6 @@ Status TempDirValidator::Validate(const fs::path& path)
 		.And(&Directory::Writable, path);
 }
 
-Status ScriptDirValidator::Validate() const
-{
-	const auto& paths = m_options.GetScriptDirPaths();
-	if (paths.empty())
-	{
-		return Status::Warning("'" + std::string(Options::SCRIPTDIR) +
-							 "' is empty. Extensions cannot be found or installed");
-	}
-
-	for (const auto& dir : paths)
-	{
-		auto status = Validate(dir).And(
-			[&]()
-			{
-				return UniquePath(GetName(), dir,
-								  {{Options::MAINDIR, m_options.GetMainDirPath()},
-								   {Options::DESTDIR, m_options.GetDestDirPath()},
-								   {Options::INTERDIR, m_options.GetInterDirPath()},
-								   {Options::NZBDIR, m_options.GetNzbDirPath()},
-								   {Options::QUEUEDIR, m_options.GetQueueDirPath()},
-								   {Options::TEMPDIR, m_options.GetTempDirPath()}});
-			});
-		if (!status.IsOk())
-		{
-			return status;
-		}
-	}
-
-	return Status::Ok();
-}
-
-Status ScriptDirValidator::Validate(const fs::path& path)
-{
-	return RequiredPathOption(Options::SCRIPTDIR, path)
-		.And(&Directory::Exists, path)
-		.And(&Directory::Writable, path);
-}
-
 Status ConfigTemplateValidator::Validate() const { return Status::Ok(); }
 
 Status LogFileValidator::Validate() const
@@ -268,7 +227,6 @@ Status CertStoreValidator::Validate(const fs::path& path, bool certCheck)
 
 Status RequiredDirValidator::Validate() const { return Status::Ok(); }
 
-#ifndef _WIN32
 Status LockFileValidator::Validate() const
 {
 	return Validate(m_options.GetLockFilePath(), m_options.GetDaemonMode())
@@ -300,5 +258,4 @@ Status LockFileValidator::Validate(const fs::path& path, bool daemonMode)
 
 	return Status::Ok();
 }
-#endif
 }  // namespace SystemHealth::Paths

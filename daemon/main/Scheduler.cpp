@@ -218,10 +218,6 @@ void Scheduler::ExecuteTask(Task* task)
 			m_pauseScanChanged = true;
 			break;
 
-		case scExtensions:
-		case scProcess:
-			break;
-
 		case scActivateServer:
 		case scDeactivateServer:
 			EditServer(task->m_command == scActivateServer, task->m_param.c_str());

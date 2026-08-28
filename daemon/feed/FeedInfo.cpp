@@ -34,7 +34,6 @@ FeedInfo::FeedInfo(
 	const char* category,
 	FeedInfo::CategorySource categorySource,
 	int priority,
-	const char* extensions,
 	unsigned int certVerifLevel
 )
 	: m_id{ id }
@@ -43,7 +42,6 @@ FeedInfo::FeedInfo(
 	, m_filter{ filter ? filter : "" }
 	, m_category{ category ? category : "" }
 	, m_categorySource{ categorySource }
-	, m_extensions{ extensions ? extensions : "" }
 	, m_backlog{ backlog}
 	, m_interval{ interval }
 	, m_pauseNzb{ pauseNzb }

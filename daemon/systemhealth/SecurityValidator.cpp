@@ -38,21 +38,17 @@ SecurityValidator::SecurityValidator(const Options& options) : m_options(options
 	m_validators.push_back(std::make_unique<AddUsernameValidator>(options));
 	m_validators.push_back(std::make_unique<AddPasswordValidator>(options));
 	m_validators.push_back(std::make_unique<AuthorizedIPValidator>(options));
-	m_validators.push_back(std::make_unique<FormAuthValidator>(options));
 	m_validators.push_back(std::make_unique<SecureControlValidator>(options));
 	m_validators.push_back(std::make_unique<SecureCertValidator>(options));
 	m_validators.push_back(std::make_unique<SecureKeyValidator>(options));
 	m_validators.push_back(std::make_unique<SecurePortValidator>(options));
 	m_validators.push_back(std::make_unique<CertCheckValidator>(options));
-	m_validators.push_back(std::make_unique<UpdateCheckValidator>(options));
 
-#ifndef _WIN32
 	if (options.GetDaemonMode())
 	{
 		m_validators.push_back(std::make_unique<DaemonUsernameValidator>(options));
 	}
 	m_validators.push_back(std::make_unique<UmaskValidator>(options));
-#endif
 }
 
 Status ControlIpValidator::Validate() const
@@ -72,13 +68,9 @@ Status ControlIpValidator::Validate() const
 	if (!ip.empty() && (ip[0] == '/' || ip[0] == '.'))
 
 	{
-#ifdef _WIN32
-		return Status::Error("Using Unix domain sockets is not supported on Windows");
-#else
 
 		return Status::Info("'" + std::string(Options::CONTROLIP) +
 							"' is set to a path, activating Unix domain socket mode");
-#endif
 	}
 
 	return Status::Ok();
@@ -258,32 +250,6 @@ Status SecurePortValidator::Validate() const
 
 Status AuthorizedIPValidator::Validate() const { return Status::Ok(); }
 
-Status UpdateCheckValidator::Validate() const { return Status::Ok(); }
-
-Status FormAuthValidator::Validate() const
-{
-	if (!m_options.GetFormAuth()) return Status::Ok();
-
-	if (!m_options.GetSecureControl())
-	{
-		return Status::Warning("'" + std::string(Options::FORMAUTH) + "' is enabled but '" +
-							   std::string(Options::SECURECONTROL) +
-							   "' is disabled. Form "
-							   "credentials may be transmitted in plaintext");
-	}
-
-	const bool hasAdd = Util::EmptyStr(m_options.GetAddUsername());
-	const bool hasRestricted = Util::EmptyStr(m_options.GetRestrictedUsername());
-	if (hasAdd && hasRestricted)
-	{
-		return Status::Warning(
-			"'" + std::string(Options::FORMAUTH) +
-			"' is enabled but no form users are configured. Users cannot log in via forms");
-	}
-
-	return Status::Ok();
-}
-
 Status SecureControlValidator::Validate() const
 {
 	if (m_options.GetSecureControl() && m_options.GetSecurePort() == 0)
@@ -304,7 +270,6 @@ Status CertCheckValidator::Validate() const
 	return Status::Ok();
 }
 
-#ifndef _WIN32
 Status DaemonUsernameValidator::Validate() const
 {
 	if (!m_options.GetDaemonMode()) return Status::Ok();
@@ -324,6 +289,5 @@ Status UmaskValidator::Validate() const
 							   "' is set to 0, files will be created with full permissions");
 	return Status::Ok();
 }
-#endif
 
 }  // namespace SystemHealth::Security

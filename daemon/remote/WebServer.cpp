@@ -26,78 +26,20 @@
 #include "Options.h"
 #include "Util.h"
 
-#ifndef DISABLE_TLS
-#include <openssl/rand.h>
-#endif
-
 static const char* ERR_HTTP_OK = "200 OK";
 static const char* ERR_HTTP_NOT_MODIFIED = "304 Not Modified";
 static const char* ERR_HTTP_BAD_REQUEST = "400 Bad Request";
 static const char* ERR_HTTP_NOT_FOUND = "404 Not Found";
 
 static const int MAX_UNCOMPRESSED_SIZE = 500;
-char WebProcessor::m_serverAuthToken[3][TOKEN_SIZE];
-
-static void GenerateSecureToken(char* token)
-{
-	// 1 byte = 2 hex characters.
-	// For a token string of size TOKEN_SIZE (including \0), we need half that many random bytes.
-	constexpr size_t BYTES_NEEDED = (TOKEN_SIZE - 1) / 2;
-
-#ifndef DISABLE_TLS
-	unsigned char randBytes[BYTES_NEEDED];
-	if (RAND_bytes(randBytes, static_cast<int>(BYTES_NEEDED)) == 1)
-	{
-		for (size_t i = 0; i < BYTES_NEEDED; ++i)
-		{
-			sprintf(&token[i * 2], "%02x", randBytes[i]);
-		}
-
-		token[TOKEN_SIZE - 1] = '\0';
-		return;
-	}
-#endif
-
-	try
-	{
-		std::random_device rd;
-		std::uniform_int_distribution<unsigned int> dist(0, 0xFF);
-		for (size_t i = 0; i < BYTES_NEEDED; ++i)
-		{
-			sprintf(&token[i * 2], "%02x", dist(rd));
-		}
-	}
-	catch (const std::exception& ex)
-	{
-		error("Could not generate secure authentication token: %s", ex.what());
-		exit(1);
-	}
-	token[TOKEN_SIZE - 1] = '\0';
-}
-
 //*****************************************************************
 // WebProcessor
-
-void WebProcessor::Init()
-{
-	if (m_serverAuthToken[0][0] != 0)
-	{
-		// already initialized
-		return;
-	}
-
-	for (size_t j = uaControl; j <= uaAdd; ++j)
-	{
-		GenerateSecureToken(m_serverAuthToken[j]);
-	}
-}
 
 void WebProcessor::Execute()
 {
 	m_gzip =false;
 	m_userAccess = uaControl;
 	m_authInfo[0] = '\0';
-	m_authToken[0] = '\0';
 
 	ParseHeaders();
 
@@ -118,7 +60,7 @@ void WebProcessor::Execute()
 	m_rpcRequest = XmlRpcProcessor::IsRpcRequest(m_url);
 	m_authorized = CheckCredentials();
 
-	if ((!g_Options->GetFormAuth() || m_rpcRequest) && !m_authorized)
+	if (!m_authorized)
 	{
 		SendAuthResponse();
 		return;
@@ -185,16 +127,6 @@ void WebProcessor::ParseHeaders()
 		{
 			m_origin = p + 8;
 		}
-		else if (!strncasecmp(p, "Cookie: ", 8))
-		{
-			debug("%s", p);
-			const char* tok = strstr(p, "Auth-Token=");
-			if (tok && tok[11] != ';' && tok[11] != '\0')
-			{
-				strncpy(m_authToken, tok + 11, sizeof(m_authToken)-1);
-				m_authToken[sizeof(m_authToken)-1] = '\0';
-			}
-		}
 		else if (!strncasecmp(p, "X-Forwarded-For: ", 17))
 		{
 			m_forwardedFor = p + 17;
@@ -238,19 +170,7 @@ bool WebProcessor::CheckCredentials()
 	if (!Util::EmptyStr(g_Options->GetControlPassword()) &&
 		!(!Util::EmptyStr(g_Options->GetAuthorizedIp()) && IsAuthorizedIp(m_connection->GetRemoteAddr())))
 	{
-		if (Util::EmptyStr(m_authInfo))
-		{
-			// Authorization via X-Auth-Token
-			for (int j = uaControl; j <= uaAdd; j++)
-			{
-				if (!strcmp(m_authToken, m_serverAuthToken[j]))
-				{
-					m_userAccess = (EUserAccess)j;
-					return true;
-				}
-			}
-			return false;
-		}
+		if (Util::EmptyStr(m_authInfo)) return false;
 
 		// Authorization via username:password
 		char* pw = strchr(m_authInfo, ':');
@@ -343,7 +263,7 @@ void WebProcessor::SendAuthResponse()
 		"\r\n";
 
 	BString<1024> responseHeader(AUTH_RESPONSE_HEADER,
-		g_Options->GetFormAuth() ? "" : "WWW-Authenticate: Basic realm=\"NZBGet\"\r\n",
+		"WWW-Authenticate: Basic realm=\"NZBGet\"\r\n",
 		m_keepAlive ? "keep-alive" : "close", Util::VersionRevision());
 
 	// Send the response answer
@@ -426,11 +346,8 @@ void WebProcessor::SendBodyResponse(const char* body, int bodyLen, const char* c
 		"Connection: %s\r\n"
 		"Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
 		"Access-Control-Allow-Origin: %s\r\n"
-		"Access-Control-Allow-Credentials: true\r\n"
 		"Access-Control-Max-Age: 86400\r\n"
 		"Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
-		"Set-Cookie: Auth-Type=%s; SameSite=Lax\r\n"
-		"Set-Cookie: Auth-Token=%s; HttpOnly; SameSite=Lax\r\n"
 		"Content-Length: %i\r\n"
 		"%s"					// Content-Type: xxx
 		"%s"					// Content-Encoding: gzip
@@ -489,8 +406,6 @@ void WebProcessor::SendBodyResponse(const char* body, int bodyLen, const char* c
 		unchanged ? ERR_HTTP_NOT_MODIFIED : ERR_HTTP_OK,
 		m_keepAlive ? "keep-alive" : "close",
 		m_origin.Str(),
-		g_Options->GetFormAuth() ? "form" : "http",
-		m_authorized ? m_serverAuthToken[m_userAccess] : "",
 		bodyLen,
 		*contentTypeHeader,
 		gzip ? "Content-Encoding: gzip\r\n" : "",

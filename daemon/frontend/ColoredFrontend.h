@@ -40,9 +40,6 @@ protected:
 private:
 	bool m_needGoBack = false;
 
-#ifdef WIN32
-	HANDLE m_console;
-#endif
 };
 
 #endif

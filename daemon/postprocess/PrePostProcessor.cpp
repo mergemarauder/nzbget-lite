@@ -922,7 +922,6 @@ void PrePostProcessor::UpdatePauseState()
 				break;
 
 			case PostInfo::ptExecutingScript:
-				needPause |= g_Options->GetScriptPauseQueue();
 				break;
 
 			case PostInfo::ptQueued:

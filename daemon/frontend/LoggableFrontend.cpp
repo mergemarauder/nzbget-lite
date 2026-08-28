@@ -79,13 +79,7 @@ void LoggableFrontend::Update()
 
 void LoggableFrontend::PrintMessage(Message& message)
 {
-#ifdef WIN32
-	CString cmsg = message.GetText();
-	CharToOem(cmsg, cmsg);
-	const char* msg = cmsg;
-#else
 	const char* msg = message.GetText();
-#endif
 	switch (message.GetKind())
 	{
 		case Message::mkDebug:

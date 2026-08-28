@@ -8,7 +8,6 @@ WORKDIR /src
 COPY . .
 RUN cmake -S . -B build \
       -DCMAKE_BUILD_TYPE=Release \
-      -DDISABLE_CURSES=ON \
       -DENABLE_TESTS=OFF && \
     cmake --build build --parallel 2 && \
     strip build/nzbget

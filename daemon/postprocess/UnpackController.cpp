@@ -756,18 +756,14 @@ bool UnpackController::Cleanup()
 				ok = false;
 			}
 
-#ifndef WIN32
 			// Fixing file or directory permissions overridden by the unpacker
 			FileSystem::RestoreFileOrDirPermissions(dstFile.Str());
-#endif
 
 			extractedFiles.push_back(filename);
 		}
 
-#ifndef WIN32
 		// Fixing directory permissions overridden by the unpacker
 		FileSystem::RestoreDirPermissions(destDir);
-#endif
 
 	}
 
@@ -900,7 +896,7 @@ void UnpackController::AddMessage(Message::EKind kind, const char* text)
 	if (m_postInfo && m_unpacker == upUnrar && !strncmp(msgText, "Unrar: UNRAR ", 13) &&
 		strstr(msgText, " Copyright ") && strstr(msgText, " Alexander Roshal"))
 	{
-		// reset start time for a case if user uses unpack-script to do some things
+		// reset the start time before another unpack attempt
 		// (like sending Wake-On-Lan message) before executing unrar
 		m_postInfo->SetStageTime(Util::CurrentTime());
 	}

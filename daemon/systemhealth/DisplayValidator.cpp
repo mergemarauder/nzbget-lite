@@ -27,20 +27,16 @@ namespace SystemHealth::Display
 
 DisplayValidator::DisplayValidator(const Options& options) : m_options(options)
 {
-	m_validators.reserve(5);
+	m_validators.reserve(2);
 	m_validators.push_back(std::make_unique<OutputModeValidator>(options));
 	m_validators.push_back(std::make_unique<UpdateIntervalValidator>(options));
-	m_validators.push_back(std::make_unique<CursesNzbNameValidator>(options));
-	m_validators.push_back(std::make_unique<CursesGroupValidator>(options));
-	m_validators.push_back(std::make_unique<CursesTimeValidator>(options));
 }
 
 Status OutputModeValidator::Validate() const
 {
 	auto mode = m_options.GetOutputMode();
 
-	if (mode == Options::EOutputMode::omLoggable || mode == Options::EOutputMode::omColored ||
-		mode == Options::EOutputMode::omNCurses)
+	if (mode == Options::EOutputMode::omLoggable || mode == Options::EOutputMode::omColored)
 	{
 		return Status::Ok();
 	}
@@ -54,37 +50,6 @@ Status UpdateIntervalValidator::Validate() const
 	if (v == 0) return Status::Ok();
 	if (v < 25)
 		return Status::Error("'" + std::string(Options::UPDATEINTERVAL) + "' must be >= 25 ms.");
-	return Status::Ok();
-}
-
-Status CursesNzbNameValidator::Validate() const
-{
-	if (m_options.GetOutputMode() != Options::EOutputMode::omNCurses &&
-		m_options.GetCursesNzbName())
-	{
-		return Status::Info("'" + std::string(Options::CURSESNZBNAME) +
-							"' applies only when OutputMode=curses");
-	}
-	return Status::Ok();
-}
-
-Status CursesGroupValidator::Validate() const
-{
-	if (m_options.GetOutputMode() != Options::EOutputMode::omNCurses && m_options.GetCursesGroup())
-	{
-		return Status::Info("'" + std::string(Options::CURSESGROUP) +
-							"' applies only when OutputMode=curses");
-	}
-	return Status::Ok();
-}
-
-Status CursesTimeValidator::Validate() const
-{
-	if (m_options.GetOutputMode() != Options::EOutputMode::omNCurses && m_options.GetCursesTime())
-	{
-		return Status::Info("'" + std::string(Options::CURSESTIME) +
-							"' applies only when OutputMode=curses");
-	}
 	return Status::Ok();
 }
 
