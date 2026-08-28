@@ -2,9 +2,10 @@
 
 NZBGet Lite is a Linux-only, API-only fork of
 [NZBGet](https://github.com/nzbgetcom/nzbget). It keeps the downloader,
-JSON-RPC/XML-RPC APIs, command-line client, and native Linux
-daemon while removing the bundled web UI, extension runtime, static-file
-server, non-Linux ports, and platform packaging infrastructure.
+JSON-RPC/XML-RPC APIs, command-line client, and Linux daemon while removing the
+bundled web UI, extension runtime, static-file server, non-Linux ports, and
+platform packaging infrastructure. It is intended to be built, distributed,
+and run exclusively as a container.
 
 This is a substantially modified, unofficial fork and is not endorsed by the
 upstream NZBGet project. See [MODIFICATIONS.md](MODIFICATIONS.md) for the base
@@ -13,57 +14,63 @@ revision, modification date, and a summary of the changes.
 There is intentionally no browser interface. Non-RPC HTTP routes return
 `404 Not Found`.
 
-## Requirements
-
-- Linux
-- CMake 3.13 or newer
-- A C++20 compiler
-- libxml2, OpenSSL, zlib, and Boost development packages
-- Git and network access during the first build for pinned `par2-turbo` and
-  `rapidyenc` dependencies
-
-On Ubuntu or Debian:
-
-```sh
-sudo apt-get update
-sudo apt-get install -y build-essential cmake git libboost-all-dev \
-  libssl-dev libxml2-dev zlib1g-dev
-```
-
-## Build and test
-
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=ON
-cmake --build build -j4
-ctest --test-dir build --output-on-failure
-```
-
-Install with `sudo cmake --install build`.
-
-## Container
+## Run the container
 
 The published image is `ghcr.io/mergemarauder/nzbget-lite:latest`. It supports
-64-bit x86 and 64-bit ARM hosts, including common NAS and Raspberry Pi systems.
+64-bit x86 and 64-bit ARM Linux hosts, including servers, NAS devices, and
+64-bit Raspberry Pi systems. Use Docker, Podman, or a Kubernetes-compatible
+container runtime.
+
+Docker:
 
 ```sh
 docker run -d --name nzbget-lite \
+  --restart unless-stopped \
   -p 6789:6789 \
   -v nzbget-config:/config \
   -v nzbget-downloads:/downloads \
   ghcr.io/mergemarauder/nzbget-lite:latest
 ```
 
-The same image works with Podman and Kubernetes. The process runs as numeric
-UID `65532` in group `0`, does not require Linux capabilities, and only writes
-to `/config` and `/downloads`. Kubernetes may replace the UID; ensure the two
-mounted volumes are writable by the selected security context or `fsGroup`.
-The image includes CA certificates and 7-Zip, but deliberately omits the
-proprietary `unrar` binary; mount or extend the image with one if required.
+Podman uses the same arguments:
 
-On first start the container copies the default configuration into `/config`.
-Change its default API password before exposing the service. A scratch image
-is not used because TLS certificate verification, archive extraction, and a
-writable first-run configuration require runtime files beyond the executable.
+```sh
+podman run -d --name nzbget-lite \
+  -p 6789:6789 \
+  -v nzbget-config:/config \
+  -v nzbget-downloads:/downloads \
+  ghcr.io/mergemarauder/nzbget-lite:latest
+```
+
+The process runs as numeric UID `65532` in group `0`, requires no Linux
+capabilities, and writes only to `/config` and `/downloads`. For bind mounts,
+make both directories writable by that identity. Kubernetes may assign a
+different UID; set an appropriate pod `securityContext` and `fsGroup` for the
+two persistent volumes.
+
+On first start, the container writes the default configuration to
+`/config/nzbget.conf`. Edit that persistent file to configure news servers and
+change the default API password, then restart the container. Configuration is
+file-based because the configuration-management API was deliberately removed.
+
+The image includes CA certificates and 7-Zip but deliberately omits the
+proprietary `unrar` binary. Extend the image or provide a compatible executable
+separately if RAR extraction is required. A scratch image is not used because
+TLS certificate verification, archive extraction, and first-run configuration
+require a small set of runtime files.
+
+## Build the image locally
+
+Native installation is not a supported deployment method. To build the
+container from this source tree:
+
+```sh
+docker build --build-arg VCS_REF="$(git rev-parse HEAD)" -t nzbget-lite .
+```
+
+Use `podman build` with the same arguments if preferred. The repository's CI
+performs native compilation and tests solely to verify the source used by the
+container; it does not publish native packages.
 
 ## API
 
