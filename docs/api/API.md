@@ -79,10 +79,6 @@ If HTTP basic authentication is somewhat problematic the username/password can a
 
 ## Configuration
 
-- [config](CONFIG.md)
-- [loadconfig](LOADCONFIG.md)
-- [saveconfig](SAVECONFIG.md)
-- [configtemplates](CONFIGTEMPLATES.md)
 
 ## Extensions
 

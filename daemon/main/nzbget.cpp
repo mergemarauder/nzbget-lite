@@ -54,7 +54,6 @@
 #include "StackTrace.h"
 #include "SystemInfo.h"
 #include "SystemHealth.h"
-#include "ScriptConfig.h"
 
 #ifdef WIN32
 #include "WinService.h"
@@ -95,7 +94,6 @@ ArticleCache* g_ArticleCache;
 ServiceCoordinator* g_ServiceCoordinator;
 System::SystemInfo* g_SystemInfo;
 SystemHealth::Service* g_SystemHealth;
-ScriptConfig* g_ScriptConfig;
 
 #ifdef WIN32
 WinConsole* g_WinConsole;
@@ -211,7 +209,6 @@ private:
 	std::unique_ptr<ServiceCoordinator> m_serviceCoordinator;
 	std::unique_ptr<System::SystemInfo> m_systemInfo;
 	std::unique_ptr<SystemHealth::Service> m_systemHealth;
-	std::unique_ptr<ScriptConfig> m_scriptConfig;
 
 #ifdef WIN32
 	std::unique_ptr<WinConsole> m_winConsole;
@@ -280,9 +277,6 @@ void NZBGet::Init()
 #endif
 
 	BootConfig();
-	m_scriptConfig = std::make_unique<ScriptConfig>();
-	g_ScriptConfig = m_scriptConfig.get();
-	m_scriptConfig->InitOptions();
 
 	if (g_Options->GetSystemHealthCheck())
 	{

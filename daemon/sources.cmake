@@ -16,7 +16,6 @@ set(SRC
 	${CMAKE_SOURCE_DIR}/daemon/frontend/NCursesFrontend.cpp
 
 	${CMAKE_SOURCE_DIR}/daemon/main/CommandLineParser.cpp
-	${CMAKE_SOURCE_DIR}/daemon/main/ScriptConfig.cpp
 	${CMAKE_SOURCE_DIR}/daemon/main/DiskService.cpp
 	${CMAKE_SOURCE_DIR}/daemon/main/Maintenance.cpp
 	${CMAKE_SOURCE_DIR}/daemon/main/Options.cpp

@@ -25,44 +25,6 @@
 
 BOOST_AUTO_TEST_SUITE(RemoteTest)
 
-class MockXmlCommand : public XmlCommand
-{
-public:
-	void Execute() override {}
-	bool TestNextParamAsStr(char** value) { return NextParamAsStr(value); }
-};
-
-BOOST_AUTO_TEST_CASE(TestSaveConfig)
-{
-	std::string jsonInput = R"({
-	"method":"saveconfig",
-	"params":[[
-		{"Name":"OptionName1","Value":"OptionValue1"},
-		{"Name":"OptionName2","Value":"OptionValue2"}
-	]],
-	"id":1})";
-
-	MockXmlCommand cmd;
-	cmd.SetRequest(&jsonInput[0]);
-	cmd.SetProtocol(XmlRpcProcessor::rpJsonRpc);
-	cmd.SetHttpMethod(XmlRpcProcessor::hmPost);
-	cmd.PrepareParams();
-
-	char* dummy = nullptr;
-	char* name = nullptr;
-	char* value = nullptr;
-
-	BOOST_CHECK(cmd.TestNextParamAsStr(&dummy));
-	BOOST_CHECK(cmd.TestNextParamAsStr(&name));
-	BOOST_CHECK(cmd.TestNextParamAsStr(&dummy));
-	BOOST_CHECK(cmd.TestNextParamAsStr(&value));
-
-	BOOST_CHECK(cmd.TestNextParamAsStr(&dummy));
-	BOOST_CHECK(cmd.TestNextParamAsStr(&name));
-	BOOST_CHECK(cmd.TestNextParamAsStr(&dummy));
-	BOOST_CHECK(cmd.TestNextParamAsStr(&value));
-}
-
 class MockXmlCommandAll final : public XmlCommand
 {
 public:

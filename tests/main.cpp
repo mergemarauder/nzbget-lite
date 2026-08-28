@@ -40,7 +40,6 @@
 #include "StatMeter.h"
 #include "SystemInfo.h"
 #include "SystemHealth.h"
-#include "ScriptConfig.h"
 
 extern char** environ;
 char* (*g_EnvironmentVariables)[];
@@ -64,7 +63,6 @@ ArticleCache* g_ArticleCache;
 ServiceCoordinator* g_ServiceCoordinator;
 System::SystemInfo* g_SystemInfo;
 SystemHealth::Service* g_SystemHealth;
-ScriptConfig* g_ScriptConfig;
 
 #ifdef _WIN32
 #include "WinConsole.h"

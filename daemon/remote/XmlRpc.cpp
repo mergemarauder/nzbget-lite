@@ -33,7 +33,6 @@
 #include "StatMeter.h"
 #include "ArticleWriter.h"
 #include "DiskState.h"
-#include "ScriptConfig.h"
 #include "UrlCoordinator.h"
 #include "SystemInfo.h"
 #include "Benchmark.h"
@@ -219,30 +218,6 @@ private:
 };
 
 class UrlQueueXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class ConfigXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class LoadConfigXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class SaveConfigXmlCommand final : public XmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class ConfigTemplatesXmlCommand final : public SafeXmlCommand
 {
 public:
 	void Execute() override;
@@ -704,11 +679,6 @@ std::unique_ptr<XmlCommand> XmlRpcProcessor::CreateCommand(const char* methodNam
 		command = std::make_unique<ErrorXmlCommand>(401, "Access denied");
 		warn("Received request \"%s\" from add-user, access denied", methodName);
 	}
-	else if (m_userAccess == uaRestricted && !strcasecmp(methodName, "saveconfig"))
-	{
-		command = std::make_unique<ErrorXmlCommand>(401, "Access denied");
-		warn("Received request \"%s\" from restricted user, access denied", methodName);
-	}
 	else if (!strcasecmp(methodName, "pause") || !strcasecmp(methodName, "pausedownload") ||
 		!strcasecmp(methodName, "pausedownload2"))
 	{
@@ -818,22 +788,6 @@ std::unique_ptr<XmlCommand> XmlRpcProcessor::CreateCommand(const char* methodNam
 	else if (!strcasecmp(methodName, "urlqueue"))
 	{
 		command = std::make_unique<UrlQueueXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "config"))
-	{
-		command = std::make_unique<ConfigXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "loadconfig"))
-	{
-		command = std::make_unique<LoadConfigXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "saveconfig"))
-	{
-		command = std::make_unique<SaveConfigXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "configtemplates"))
-	{
-		command = std::make_unique<ConfigTemplatesXmlCommand>();
 	}
 	else if (!strcasecmp(methodName, "viewfeed"))
 	{
@@ -2908,144 +2862,6 @@ void UrlQueueXmlCommand::Execute()
 }
 
 // struct[] config()
-void ConfigXmlCommand::Execute()
-{
-	const char* XML_CONFIG_ITEM =
-		"<value><struct>\n"
-		"<member><name>Name</name><value><string>%s</string></value></member>\n"
-		"<member><name>Value</name><value><string>%s</string></value></member>\n"
-		"</struct></value>\n";
-
-	const char* JSON_CONFIG_ITEM =
-		"{\n"
-		"\"Name\" : \"%s\",\n"
-		"\"Value\" : \"%s\"\n"
-		"}";
-
-	AppendResponse(IsJson() ? "[\n" : "<array><data>\n");
-
-	int index = 0;
-
-	for (Options::OptEntry& optEntry : g_Options->GuardOptEntries())
-	{
-		CString xmlValue = EncodeStr(m_userAccess == XmlRpcProcessor::uaRestricted &&
-			optEntry.Restricted() ? "***" : optEntry.GetValue());
-
-		AppendCondResponse(",\n", IsJson() && index++ > 0);
-		AppendFmtResponse(IsJson() ? JSON_CONFIG_ITEM : XML_CONFIG_ITEM,
-			*EncodeStr(optEntry.GetName()), *xmlValue);
-	}
-
-	AppendResponse(IsJson() ? "\n]" : "</data></array>\n");
-}
-
-// struct[] loadconfig()
-void LoadConfigXmlCommand::Execute()
-{
-	const char* XML_CONFIG_ITEM =
-		"<value><struct>\n"
-		"<member><name>Name</name><value><string>%s</string></value></member>\n"
-		"<member><name>Value</name><value><string>%s</string></value></member>\n"
-		"</struct></value>\n";
-
-	const char* JSON_CONFIG_ITEM =
-		"{\n"
-		"\"Name\" : \"%s\",\n"
-		"\"Value\" : \"%s\"\n"
-		"}";
-
-	Options::OptEntries optEntries;
-	if (!g_ScriptConfig->LoadConfig(&optEntries))
-	{
-		BuildErrorResponse(3, "Could not read configuration file");
-		return;
-	}
-
-	AppendResponse(IsJson() ? "[\n" : "<array><data>\n");
-
-	int index = 0;
-
-	for (Options::OptEntry& optEntry: optEntries)
-	{
-		CString xmlValue = EncodeStr(m_userAccess == XmlRpcProcessor::uaRestricted &&
-			optEntry.Restricted() ? "***" : optEntry.GetValue());
-
-		AppendCondResponse(",\n", IsJson() && index++ > 0);
-		AppendFmtResponse(IsJson() ? JSON_CONFIG_ITEM : XML_CONFIG_ITEM,
-			*EncodeStr(optEntry.GetName()), *xmlValue);
-	}
-
-	AppendResponse(IsJson() ? "\n]" : "</data></array>\n");
-}
-
-
-// bool saveconfig(struct[] data)
-void SaveConfigXmlCommand::Execute()
-{
-	Options::OptEntries optEntries;
-
-	char* name;
-	char* value;
-	char* dummy;
-	while ((IsJson() && NextParamAsStr(&dummy) && NextParamAsStr(&name) &&
-			NextParamAsStr(&dummy) && NextParamAsStr(&value)) ||
-		   (!IsJson() && NextParamAsStr(&name) && NextParamAsStr(&value)))
-	{
-		DecodeStr(name);
-		DecodeStr(value);
-		optEntries.emplace_back(name, value);
-	}
-
-	// save to config file
-	bool ok = g_ScriptConfig->SaveConfig(&optEntries);
-
-	BuildBoolResponse(ok);
-}
-
-// struct[] configtemplates(bool loadFromDisk)
-// parameter "loadFromDisk" is optional (new in v14)
-void ConfigTemplatesXmlCommand::Execute()
-{
-	const char* XML_CONFIG_ITEM =
-		"<value><struct>\n"
-		"<member><name>Template</name><value><string>%s</string></value></member>\n"
-		"</struct></value>\n";
-
-	const char* JSON_CONFIG_ITEM =
-		"{\n"
-		"\"Template\" : \"%s\"\n"
-		"}";
-
-	bool loadFromDisk = false;
-	NextParamAsBool(&loadFromDisk);
-
-	ScriptConfig::ConfigTemplates* configTemplates = g_ScriptConfig->GetConfigTemplates();
-
-	ScriptConfig::ConfigTemplates loadedConfigTemplates;
-	if (loadFromDisk)
-	{
-		if (!g_ScriptConfig->LoadConfigTemplates(&loadedConfigTemplates))
-		{
-			BuildErrorResponse(3, "Could not read configuration templates");
-			return;
-		}
-		configTemplates = &loadedConfigTemplates;
-	}
-
-	AppendResponse(IsJson() ? "[\n" : "<array><data>\n");
-
-	int index = 0;
-
-	for (ScriptConfig::ConfigTemplate& configTemplate : configTemplates)
-	{
-		AppendCondResponse(",\n", IsJson() && index++ > 0);
-		AppendFmtResponse(IsJson() ? JSON_CONFIG_ITEM : XML_CONFIG_ITEM,
-			*EncodeStr(configTemplate.GetTemplate()));
-	}
-
-	AppendResponse(IsJson() ? "\n]" : "</data></array>\n");
-}
-
 // struct[] viewfeed(int id)
 // v12:
 // struct[] previewfeed(string name, string url, string filter, bool pauseNzb, string category,
