@@ -1,7 +1,7 @@
 # Building on Linux
 
 NZBGet Lite supports native Linux builds only. Install a C++20 compiler,
-CMake, Git, and the development packages for Boost, libxml2, OpenSSL, ncurses,
+CMake, Git, and the development packages for Boost, libxml2, OpenSSL,
 and zlib, then run:
 
 ```sh

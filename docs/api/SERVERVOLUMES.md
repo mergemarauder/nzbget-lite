@@ -75,7 +75,7 @@ To find out the day slot for a specific day:
 For example, if the program was just installed and today is `17 March 2017` the field `FirstDay` will have value `17242` (timestamp 1489788000 divided by 86400). To find out the slot for `17 March 2017` we take the timestamp for any second of this day (for example [1489788000](http://www.unixtimestamp.com/)) and divide it by 86400 and subtract value of `FirstDay` (17242). We get number `0`, indicating slot 0. For `18 March 2017` the formula gives slot number `1` (which BTW doesn’t exist on 17 March yet).
 
 ### Monthly and yearly data
-You need to calculate the slot numbers for the first and the last days of a certain month, year or any other period and then sum the data from all slots belonging to the period. As an example see the source code of web-interface in file `status.js`.
+Calculate the slot numbers for the first and last days of a month, year, or other period, then sum the data from all slots in that period.
 
 ### Summary
 As you see this method returns the raw data from the statistics meter and you have to perform calculations to represent the data in a user friendly format such as: downloaded today, yesterday, this or previous week or month etc.

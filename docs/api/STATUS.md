@@ -64,7 +64,6 @@ This method returns structure with following fields:
 - **TotalInterDiskSpaceLo** `(int)` - `v24.3` Total disk space on `InterDir`, in bytes. This field contains the low 32-bits of 64-bit value
 - **TotalInterDiskSpaceHi** `(int)` - `v24.3` Total disk space on `InterDir`, in bytes. This field contains the high 32-bits of 64-bit value
 - **TotalInterDiskSpaceMB** `(int)` - `v24.3` Total disk space on `InterDir`, in MiB.
-- **QueueScriptCount** `(int)` - Indicates number of queue-scripts queued for execution including the currently running.
 - **NewsServers** `(struct[])` - Status of news-servers, array of structures with following fields
   - **ID** `(int)` - Server number in the configuration file. For example `1` for server defined by options `Server1.Host`, `Server1.Port`, etc.
   - **Active** `(bool)` - `true` if server is in active state (enabled). `Active` doesn’t mean that the data is being downloaded from the server right now. This only means the server can be used for download (if there are any download jobs).

@@ -23,19 +23,9 @@ However, for maximum performance, it's better to explicitly set the cipher list 
 
 NZBGet uses the [OpenSSL](https://openssl-library.org/) library for its TLS/SSL connections, which means we can use OpenSSL's built-in tools to test encryption speed.
 
-  - On Linux, you can typically install it via your package manager e.g., for Debian/Ubuntu
+  - Install it with your Linux package manager, for example on Debian/Ubuntu:
   ```text
   apt install openssl
-  ```
-
-  - On macOS, the easiest way is with Homebrew:
-  ```text
-  brew install openssl
-  ```
-
-  - On Windows, you may need to download an installer from a trusted source or use a package manager like Chocolatey:
-  ```text
-  choco install openssl
   ```
 
 ### Finding the Fastest Cipher on Your System

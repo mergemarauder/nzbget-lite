@@ -1,6 +1,6 @@
-## Status of this document
+# RPC API
 
-The document describes methods available in NZBGet `version 13.0 and later`. The document is updated after a new stable version is out. Current testing version may have methods or fields not described here; these methods or fields may change before getting stable.
+This document describes the RPC methods retained by NZBGet Lite.
 
 ## Protocols
 
@@ -10,10 +10,8 @@ NZBGet supports `XML-RPC`, `JSON-RPC` and `JSON-P-RPC`. RPC-protocols allow to c
 
 NZBGet has three pairs of username/password:
 
-- options `ControlUsername` and `ControlPassword` - Full access, usually used when connecting to web-interface;
-- options `RestrictedUsername` and `RestrictedPassword` - `v15.0` Restricted user can control the program with few restrictions. He has access to web-interface and can see most program settings. He can not change program settings and can not view security related options or options provided by extension scripts. In terms of RPC-API the user:
-  - cannot use method `saveconfig`;
-  - methods `config` and `loadconfig` return string `***` for options those content is protected from the user.
+- options `ControlUsername` and `ControlPassword` - full API access;
+- options `RestrictedUsername` and `RestrictedPassword` - control access without security-sensitive operations;
 - options `AddUsername` and `AddPassword` - `v15.0` This user has only two permissions:
   - add new downloads using RPC-method `append`;
   - check program version using RPC-method `version`.
@@ -62,7 +60,6 @@ If HTTP basic authentication is somewhat problematic the username/password can a
 - [log](LOG.md)
 - [writelog](WRITELOG.md)
 - [loadlog](LOADLOG.md)
-- [logupdate](LOGUPDATE.md)
 - [servervolumes](SERVERVOLUMES.md)
 - [resetservervolume](RESETSERVERVOLUME.md)
 
@@ -76,12 +73,6 @@ If HTTP basic authentication is somewhat problematic the username/password can a
 - [pausescan](PAUSESCAN.md)
 - [resumescan](RESUMESCAN.md)
 - [scheduleresume](SCHEDULERESUME.md)
-
-## Configuration
-
-
-## Extensions
-
 
 ## Tests
 

@@ -82,7 +82,7 @@ For more filter possibilities please see [pytest](https://docs.pytest.org/en/lat
   
 Directory used by NZBGet during testing (`tests/testdata/nzbget.temp` by default) is automatically deleted if all tests succeed. If a test fails the directory is kept in order to preserve log-files and queue-files for failure analysis. However during testing NZBGet is started and stopped multiple times. If the failed test wasn’t the last test the preserved NZBGet directory may not contain data of the failed test. In such case it’s better to rerun the specific failed test as the only test (using specific command line).
 
-After test completion NZBGet is terminated. To analyze a test failure it can be useful to have NZBGet running, for example to inspect the state in web-interface. Pass extra parameter `--hold` to achieve this:
+After test completion NZBGet is terminated. To analyze a test failure it can be useful to keep NZBGet running for API inspection. Pass extra parameter `--hold` to achieve this:
 
 ```bash
   pytest -v parcheck/parcheck_auto_test.py::test_parchecker_repair --hold

@@ -14,7 +14,7 @@ There is intentionally no browser interface. Non-RPC HTTP routes return
 - Linux
 - CMake 3.13 or newer
 - A C++20 compiler
-- libxml2, OpenSSL, ncurses, zlib, and Boost development packages
+- libxml2, OpenSSL, zlib, and Boost development packages
 - Git and network access during the first build for pinned `par2-turbo` and
   `rapidyenc` dependencies
 
@@ -23,7 +23,7 @@ On Ubuntu or Debian:
 ```sh
 sudo apt-get update
 sudo apt-get install -y build-essential cmake git libboost-all-dev \
-  libncurses-dev libssl-dev libxml2-dev zlib1g-dev
+  libssl-dev libxml2-dev zlib1g-dev
 ```
 
 ## Build and test
@@ -39,8 +39,7 @@ Install with `sudo cmake --install build`.
 ## Container
 
 The published image is `ghcr.io/mergemarauder/nzbget-lite:latest`. It supports
-64-bit x86, 64-bit ARM, and 32-bit ARM v7 hosts, including common NAS and
-Raspberry Pi systems.
+64-bit x86 and 64-bit ARM hosts, including common NAS and Raspberry Pi systems.
 
 ```sh
 docker run -d --name nzbget-lite \
