@@ -1,8 +1,14 @@
-## Platforms
+# Building on Linux
 
-Articles below provide detailed information on manual compilation of NZBGet for specific platforms:
+NZBGet Lite supports native Linux builds only. Install a C++20 compiler,
+CMake, Git, and the development packages for Boost, libxml2, OpenSSL, ncurses,
+and zlib, then run:
 
- - [POSIX](docs/POSIX.md)
- - [Windows](docs/WINDOWS.md)
- - [Synology](synology/build-info.md) 
- - [QNAP](qnap/build-info.md)
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=ON
+cmake --build build -j4
+ctest --test-dir build --output-on-failure
+sudo cmake --install build
+```
+
+The first build downloads pinned `par2-turbo` and `rapidyenc` sources.

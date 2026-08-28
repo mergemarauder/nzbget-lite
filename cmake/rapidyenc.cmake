@@ -1,17 +1,7 @@
 set(RAPIDYENC_ROOT ${CMAKE_BINARY_DIR}/rapidyenc/src)
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-	set(RAPIDYENC_LIBS
-		${RAPIDYENC_ROOT}/rapidyenc-build/rapidyenc_static/${CMAKE_BUILD_TYPE}/rapidyenc.lib
-	)
-elseif(CMAKE_GENERATOR MATCHES "Xcode")
-	set(RAPIDYENC_LIBS
-		${RAPIDYENC_ROOT}/rapidyenc-build/rapidyenc_static/${CMAKE_BUILD_TYPE}/librapidyenc.a
-	)
-else()
-	set(RAPIDYENC_LIBS
-		${RAPIDYENC_ROOT}/rapidyenc-build/rapidyenc_static/librapidyenc.a
-	)
-endif()
+set(RAPIDYENC_LIBS
+	${RAPIDYENC_ROOT}/rapidyenc-build/rapidyenc_static/librapidyenc.a
+)
 
 set(CMAKE_ARGS
 	-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -28,20 +18,8 @@ set(CMAKE_ARGS
 	-DUSE_SANITIZERS=${USE_SANITIZERS}
 )
 
-if(MSVC)
-	set(CMAKE_ARGS ${CMAKE_ARGS}
-		-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>
-	)
-endif()
-
 if(DEFINED TOOLCHAIN_PREFIX)
 	set(CMAKE_ARGS ${CMAKE_ARGS} -DTOOLCHAIN_PREFIX=${TOOLCHAIN_PREFIX})
-endif()
-
-if(APPLE)
-	set(CMAKE_ARGS ${CMAKE_ARGS}
-		-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
-	)
 endif()
 
 if(CMAKE_SYSROOT)

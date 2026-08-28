@@ -22,39 +22,13 @@ message(STATUS "  USE SANITIZERS:    ${USE_SANITIZERS}")
 
 set(BOOST_NEEDED_COMPONENTS json)
 
-if(APPLE)
-	# On macOS Cmake, when cross-compiling, sometimes CMAKE_SYSTEM_PROCESSOR wrongfully stays
-	# the same as CMAKE_HOST_SYSTEM_PROCESSOR regardless the target CPU.
-	# The manual call to set(CMAKE_SYSTEM_PROCESSOR) has to be set after the project() call.
-	# because project() might reset CMAKE_SYSTEM_PROCESSOR back to the value of CMAKE_HOST_SYSTEM_PROCESSOR.
-	# Check if CMAKE_SYSTEM_PROCESSOR is not equal to CMAKE_OSX_ARCHITECTURES
-	if(NOT CMAKE_OSX_ARCHITECTURES STREQUAL "")
-		if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL CMAKE_OSX_ARCHITECTURES)
-			# Split CMAKE_OSX_ARCHITECTURES into a list
-			string(REPLACE ";" " " ARCH_LIST ${CMAKE_OSX_ARCHITECTURES})
-			separate_arguments(ARCH_LIST UNIX_COMMAND ${ARCH_LIST})
-			# Count the number of architectures
-			list(LENGTH ARCH_LIST ARCH_COUNT)
-			# Ensure that exactly one architecture is specified
-			if(NOT ARCH_COUNT EQUAL 1)
-				message(FATAL_ERROR "CMAKE_OSX_ARCHITECTURES must have exactly one value. Current value: ${CMAKE_OSX_ARCHITECTURES}")
-			endif()
-			set(CMAKE_SYSTEM_PROCESSOR ${CMAKE_OSX_ARCHITECTURES})
-			message(STATUS "CMAKE_SYSTEM_PROCESSOR is manually set to ${CMAKE_SYSTEM_PROCESSOR}")
-		endif()
-	endif()
-endif()
-
 if(ENABLE_CLANG_TIDY)
 	set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 endif()
 
 if(ENABLE_STATIC)
-	# due to the error "ld: library not found for -crt0.o" when using Apple Clang with "-static"
-	if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-		set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-static" CACHE STRING "" FORCE)
-		set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -static" CACHE STRING "" FORCE)
-	endif()
+	set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-static" CACHE STRING "" FORCE)
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -static" CACHE STRING "" FORCE)
 
 	set(BUILD_SHARED_LIBS OFF)
 	set(LIBS ${LIBS} $ENV{LIBS})
@@ -77,9 +51,7 @@ else()
 
 	if(NOT DISABLE_CURSES)
 		set(CURSES_NEED_NCURSES TRUE)
-		if(NOT APPLE)
-			set(CURSES_NEED_WIDE TRUE)
-		endif()
+		set(CURSES_NEED_WIDE TRUE)
 		find_package(Curses REQUIRED)
 		set(INCLUDES ${INCLUDES} ${CURSES_INCLUDE_DIRS})
 		set(LIBS ${LIBS} ${CURSES_LIBRARIES})
