@@ -1,10 +1,14 @@
+<!-- Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md. -->
 # Security Policy
 
-If you believe you have found a security vulnerability in NZBGet, please report it to us as described below.
+If you believe you have found a security vulnerability in NZBGet Lite, report
+it as described below. Do not send NZBGet Lite issues to the upstream NZBGet
+project unless the issue is independently reproducible there.
 
 ## Reporting Security Issues
 
-Please do not report security vulnerabilities through public GitHub issues. Instead, please use GitHubs private vulnerability reporting functionality associated to this repository. 
+Do not report security vulnerabilities through public GitHub issues. Use
+GitHub's private vulnerability reporting functionality for this repository.
 
 Please include the requested information listed below (as much as you can provide) to help us better understand the nature and scope of the possible issue:
 1. Type of issue
@@ -14,4 +18,5 @@ Please include the requested information listed below (as much as you can provid
 
 This information will help us review your report faster.
 
-This security policy only applies to the most recent stable branch of NZBGet. Flaws in old versions that are not present in the current stable branch will not be fixed.
+This policy applies to the `main` branch and the most recently published
+NZBGet Lite container image.
