@@ -1,0 +1,6 @@
+.git
+.github
+build
+Dockerfile*
+docs
+tests
