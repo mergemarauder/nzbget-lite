@@ -74,11 +74,8 @@ private:
 	void SendAuthResponse();
 	void SendOptionsResponse();
 	void SendErrorResponse(const char* errCode, bool printWarning);
-	void SendSingleFileResponse();
-	void SendMultiFileResponse();
 	void SendBodyResponse(const char* body, int bodyLen, const char* contentType, bool cachable);
 	void SendRedirectResponse(const char* url);
-	const char* DetectContentType(const char* filename);
 	bool IsAuthorizedIp(const char* remoteAddr);
 	void ParseHeaders();
 	void ParseUrl();

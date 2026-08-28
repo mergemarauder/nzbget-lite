@@ -44,7 +44,6 @@ public:
 	static constexpr std::string_view TEMPDIR = "TempDir";
 	static constexpr std::string_view QUEUEDIR = "QueueDir";
 	static constexpr std::string_view NZBDIR = "NzbDir";
-	static constexpr std::string_view WEBDIR = "WebDir";
 	static constexpr std::string_view CONFIGTEMPLATE = "ConfigTemplate";
 	static constexpr std::string_view SCRIPTDIR = "ScriptDir";
 	static constexpr std::string_view REQUIREDDIR = "RequiredDir";
@@ -401,7 +400,6 @@ public:
 	const char* GetTempDir() const { return m_tempDir; }
 	const char* GetQueueDir() const { return m_queueDir; }
 	const char* GetNzbDir() const { return m_nzbDir; }
-	const char* GetWebDir() const { return m_webDir; }
 	const char* GetConfigTemplate() const { return m_configTemplate; }
 	const char* GetScriptDir() const { return m_scriptDir; }
 	const char* GetRequiredDir() const { return m_requiredDir; }
@@ -533,7 +531,6 @@ public:
 	const fs::path& GetTempDirPath() const { return m_tempDirPath; }
 	const fs::path& GetQueueDirPath() const { return m_queueDirPath; }
 	const fs::path& GetNzbDirPath() const { return m_nzbDirPath; }
-	const fs::path& GetWebDirPath() const { return m_webDirPath; }
 	const fs::path& GetConfigTemplatePath() const { return m_configTemplatePath; }
 	const fs::path& GetSecureCertPath() const { return m_secureCertPath; }
 	const fs::path& GetSecureKeyPath() const { return m_secureKeyPath; }
@@ -565,7 +562,6 @@ private:
 	fs::path m_tempDirPath;
 	fs::path m_queueDirPath;
 	fs::path m_nzbDirPath;
-	fs::path m_webDirPath;
 	fs::path m_configTemplatePath;
 	fs::path m_secureCertPath;
 	fs::path m_secureKeyPath;
@@ -587,7 +583,6 @@ private:
 	CString m_tempDir;
 	CString m_queueDir;
 	CString m_nzbDir;
-	CString m_webDir;
 	CString m_configTemplate;
 	CString m_scriptDir;
 	CString m_requiredDir;

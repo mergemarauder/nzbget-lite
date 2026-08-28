@@ -40,7 +40,6 @@ struct StubOptions : public Options
 	fs::path GetInterDirPath() const { return ""; }
 	fs::path GetNzbDirPath() const { return ""; }
 	fs::path GetQueueDirPath() const { return ""; }
-	fs::path GetWebDirPath() const { return ""; }
 	fs::path GetTempDirPath() const { return ""; }
 	std::vector<std::string> GetScriptDirPaths() const { return {}; }
 	fs::path GetConfigTemplatePath() const { return ""; }
@@ -119,18 +118,6 @@ BOOST_AUTO_TEST_CASE(TestInterDirValidator)
 	BOOST_CHECK(validator.Validate(dir).IsOk());
 
 	BOOST_CHECK(validator.Validate(tempPath / "phantom").IsError());
-}
-
-BOOST_AUTO_TEST_CASE(TestWebDirValidator)
-{
-	WebDirValidator validator(options);
-	fs::path dir = tempPath / "web";
-
-	BOOST_CHECK(validator.Validate("").IsOk());
-
-	fs::create_directory(dir);
-	BOOST_CHECK(validator.Validate(dir).IsOk());
-	BOOST_CHECK(validator.Validate(tempPath / "noweb").IsError());
 }
 
 BOOST_AUTO_TEST_CASE(TestLogFileValidator)

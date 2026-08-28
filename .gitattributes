@@ -13,7 +13,6 @@ tests/testdata/**/*             binary
 
 # Configure GitHub's language detector
 lib/*               linguist-vendored linguist-language=C++
-webui/lib/*         linguist-vendored
 Makefile.in         linguist-vendored
 configure           linguist-vendored
 config.sub          linguist-vendored

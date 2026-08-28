@@ -104,19 +104,6 @@ private:
 	const Options& m_options;
 };
 
-class WebDirValidator final : public Validator
-{
-public:
-	explicit WebDirValidator(const Options& options) : m_options(options) {}
-
-	std::string_view GetName() const override { return Options::WEBDIR; }
-	Status Validate() const override;
-	static Status Validate(const fs::path& path);
-
-private:
-	const Options& m_options;
-};
-
 class TempDirValidator final : public Validator
 {
 public:

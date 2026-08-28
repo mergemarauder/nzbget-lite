@@ -179,7 +179,6 @@ BOOST_AUTO_TEST_CASE(ParsePathsTest)
 	cmdOpts.push_back("DestDir=/usr/etc/nzbget/dst");
 	cmdOpts.push_back("InterDir=/usr/etc/nzbget/inter");
 	cmdOpts.push_back("TempDir=/usr/etc/nzbget/tmp");
-	cmdOpts.push_back("WebDir=/usr/etc/nzbget/webui");
 	cmdOpts.push_back("NzbDir=/usr/etc/nzbget/nzb");
 	cmdOpts.push_back("QueueDir=/usr/etc/nzbget/queue");
 	cmdOpts.push_back("LockFile=/usr/etc/nzbget/nzbget.lock");
@@ -198,7 +197,6 @@ BOOST_AUTO_TEST_CASE(ParsePathsTest)
 	BOOST_CHECK_EQUAL(options.GetDestDir(), "/usr/etc/nzbget/dst");
 	BOOST_CHECK_EQUAL(options.GetInterDir(), "/usr/etc/nzbget/inter");
 	BOOST_CHECK_EQUAL(options.GetTempDir(), "/usr/etc/nzbget/tmp");
-	BOOST_CHECK_EQUAL(options.GetWebDir(), "/usr/etc/nzbget/webui");
 	BOOST_CHECK_EQUAL(options.GetNzbDir(), "/usr/etc/nzbget/nzb");
 	BOOST_CHECK_EQUAL(options.GetQueueDir(), "/usr/etc/nzbget/queue");
 	BOOST_CHECK_EQUAL(options.GetLockFile(), "/usr/etc/nzbget/nzbget.lock");

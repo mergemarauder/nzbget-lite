@@ -25,7 +25,6 @@
 #include "Log.h"
 #include "Options.h"
 #include "Util.h"
-#include "FileSystem.h"
 
 #ifndef DISABLE_TLS
 #include <openssl/rand.h>
@@ -35,7 +34,6 @@ static const char* ERR_HTTP_OK = "200 OK";
 static const char* ERR_HTTP_NOT_MODIFIED = "304 Not Modified";
 static const char* ERR_HTTP_BAD_REQUEST = "400 Bad Request";
 static const char* ERR_HTTP_NOT_FOUND = "404 Not Found";
-static const char* ERR_HTTP_SERVICE_UNAVAILABLE = "503 Service Unavailable";
 
 static const int MAX_UNCOMPRESSED_SIZE = 500;
 char WebProcessor::m_serverAuthToken[3][TOKEN_SIZE];
@@ -346,96 +344,7 @@ void WebProcessor::Dispatch()
 	}
 
 	if (m_httpMethod != hmGet)
-	{
-		SendErrorResponse(ERR_HTTP_BAD_REQUEST, true);
-		return;
-	}
-
-	// for security reasons we allow only characters "0..9 A..Z a..z . - + _ / ?" in the URLs
-	// we also don't allow ".." in the URLs
-	for (char *p = m_url; *p; p++)
-	{
-		if (!((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
-			*p == '.' || *p == '-' || *p == '+' || *p == '?' || *p == '_' || *p == '/') || (*p == '.' && p[1] == '.'))
-		{
-			SendErrorResponse(ERR_HTTP_NOT_FOUND, true);
-			return;
-		}
-	}
-
-	if (!strncmp(m_url, "/extensions/", 12))
-	{
-		if (!m_authorized)
-		{
-			SendAuthResponse();
-			return;
-		}
-
-		const auto& scriptDirs = g_Options->GetScriptDirPaths();
-		if (scriptDirs.empty())
-		{
-			SendErrorResponse(ERR_HTTP_SERVICE_UNAVAILABLE, true);
-			return;
-		}
-
-		// URL format: /extensions/{extname}/{path}
-		// maps to: {ScriptDir}/{extname}/{path}
-		std::string_view extUrl = m_url + 12;
-		auto slash = extUrl.find('/');
-		// reject missing path separator and reject absolute extUrl (e.g. //etc/passwd)
-		if (slash == std::string_view::npos || slash == 0)
-		{
-			SendErrorResponse(ERR_HTTP_NOT_FOUND, false);
-			return;
-		}
-
-		bool found = false;
-		for (const auto& scriptDir : scriptDirs)
-		{
-			fs::path filePath = scriptDir / extUrl;
-			fs::error_code ec;
-			auto resolvedDir = fs::canonical(scriptDir, ec);
-			if (ec) continue;
-
-			auto resolvedPath = fs::canonical(filePath, ec);
-			if (ec) continue;
-
-			auto rel = resolvedPath.lexically_relative(resolvedDir);
-			if (rel.empty() || rel.native().front() == '.') continue;
-
-			CharBuffer body;
-			std::string filePathStr = fs::u8string(resolvedPath);
-			if (FileSystem::LoadFileIntoBuffer(filePathStr.c_str(), body, true))
-			{
-				const char* contentType = DetectContentType(filePathStr.c_str());
-				int len = body.Size() - 1;
-				SendBodyResponse(body, len, contentType, true);
-				found = true;
-				break;
-			}
-		}
-
-		if (!found)
-		{
-			SendErrorResponse(ERR_HTTP_NOT_FOUND, false);
-		}
-		return;
-	}
-
-	if (Util::EmptyStr(g_Options->GetWebDir()))
-	{
-		SendErrorResponse(ERR_HTTP_SERVICE_UNAVAILABLE, true);
-		return;
-	}
-
-	if (!strncmp(m_url, "/combined.", 10) && strchr(m_url, '?'))
-	{
-		SendMultiFileResponse();
-	}
-	else
-	{
-		SendSingleFileResponse();
-	}
+	SendErrorResponse(ERR_HTTP_NOT_FOUND, true);
 }
 
 void WebProcessor::SendAuthResponse()
@@ -609,113 +518,4 @@ void WebProcessor::SendBodyResponse(const char* body, int bodyLen, const char* c
 	// Send the request answer
 	m_connection->Send(responseHeader, responseHeader.Length());
 	m_connection->Send(body, bodyLen);
-}
-
-void WebProcessor::SendSingleFileResponse()
-{
-	const char *defRes = "";
-	if (m_url[strlen(m_url)-1] == '/')
-	{
-		// default file in directory (if not specified) is "index.html"
-		defRes = "index.html";
-	}
-
-	BString<1024> filename("%s%s%s", g_Options->GetWebDir(), *m_url, defRes);
-
-	debug("serving file: %s", *filename);
-
-	CharBuffer body;
-	if (!FileSystem::LoadFileIntoBuffer(filename, body, true))
-	{
-		// do not print warnings "404 not found" for certain files
-		bool ignorable = !strcmp(filename, "package-info.json") ||
-			!strcmp(filename, "favicon.ico") ||
-			!strncmp(filename, "apple-touch-icon", 16);
-
-		SendErrorResponse(ERR_HTTP_NOT_FOUND, ignorable);
-		return;
-	}
-
-	const char* contentType = DetectContentType(filename);
-	int len = body.Size() - 1;
-
-#ifdef DEBUG
-	if (contentType && !strcmp(contentType, "text/html"))
-	{
-		Util::ReduceStr(body, "<!-- %if-debug%", "");
-		Util::ReduceStr(body, "<!-- %if-not-debug% -->", "<!--");
-		Util::ReduceStr(body, "<!-- %end% -->", "-->");
-		Util::ReduceStr(body, "%end% -->", "");
-		len = strlen(body);
-	}
-#endif
-
-	SendBodyResponse(body, len, contentType, true);
-}
-
-void WebProcessor::SendMultiFileResponse()
-{
-	debug("serving multiple files: %s", *m_url);
-
-	StringBuilder response;
-	char* filelist = strchr(m_url, '?');
-	*filelist++ = '\0';
-
-	Tokenizer tok(filelist, "+");
-	while (const char* filename = tok.Next())
-	{
-		BString<1024> diskFilename("%s%c%s", g_Options->GetWebDir(), PATH_SEPARATOR, filename);
-
-		CharBuffer body;
-		if (!FileSystem::LoadFileIntoBuffer(diskFilename, body, true))
-		{
-			warn("Web-Server: %s, Resource: /%s", ERR_HTTP_NOT_FOUND, filename);
-			SendErrorResponse(ERR_HTTP_NOT_FOUND, false);
-			return;
-		}
-
-		response.Append(body);
-	}
-
-	SendBodyResponse(response, response.Length(), DetectContentType(m_url), true);
-}
-
-const char* WebProcessor::DetectContentType(const char* filename)
-{
-	if (const char *ext = strrchr(filename, '.'))
-	{
-		if (!strcasecmp(ext, ".css"))
-		{
-			return "text/css";
-		}
-		else if (!strcasecmp(ext, ".html"))
-		{
-			return "text/html";
-		}
-		else if (!strcasecmp(ext, ".js"))
-		{
-			return "application/javascript";
-		}
-		else if (!strcasecmp(ext, ".png"))
-		{
-			return "image/png";
-		}
-		else if (!strcasecmp(ext, ".jpeg"))
-		{
-			return "image/jpeg";
-		}
-		else if (!strcasecmp(ext, ".gif"))
-		{
-			return "image/gif";
-		}
-		else if (!strcasecmp(ext, ".svg"))
-		{
-			return "image/svg+xml";
-		}
-		else if (!strcasecmp(ext, ".json"))
-		{
-			return "application/json";
-		}
-	}
-	return nullptr;
 }

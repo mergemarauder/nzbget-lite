@@ -130,7 +130,6 @@ class Nzbget:
 		config.write('WriteBuffer=1024\n')
 		config.write('NzbDirInterval=0\n')
 		config.write('FlushQueue=no\n')
-		config.write('WebDir=' + nzbget_srcdir + '/webui\n')
 		config.write('ConfigTemplate=' + nzbget_srcdir + '/nzbget.conf\n')
 		config.write('ControlUsername=\n')
 		config.write('ControlPassword=\n')

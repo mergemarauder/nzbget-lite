@@ -29,13 +29,12 @@ PathsValidator::PathsValidator(const Options& options, const ::Log& log)
 	: m_options(options)
 	, m_log(log)
 {
-	m_validators.reserve(13);
+	m_validators.reserve(12);
 	m_validators.push_back(std::make_unique<MainDirValidator>(options));
 	m_validators.push_back(std::make_unique<DestDirValidator>(options));
 	m_validators.push_back(std::make_unique<InterDirValidator>(options));
 	m_validators.push_back(std::make_unique<NzbDirValidator>(options));
 	m_validators.push_back(std::make_unique<QueueDirValidator>(options));
-	m_validators.push_back(std::make_unique<WebDirValidator>(options));
 	m_validators.push_back(std::make_unique<TempDirValidator>(options));
 	m_validators.push_back(std::make_unique<ScriptDirValidator>(options));
 	m_validators.push_back(std::make_unique<ConfigTemplateValidator>(options));
@@ -137,28 +136,6 @@ Status QueueDirValidator::Validate(const fs::path& path)
 		.And(&Directory::Writable, path);
 }
 
-Status WebDirValidator::Validate() const
-{
-	const auto& path = m_options.GetWebDirPath();
-	return Validate(path).And(
-		[&]()
-		{
-			if (path.empty()) return Status::Ok();
-			return UniquePath(GetName(), m_options.GetWebDirPath(),
-							  {{Options::MAINDIR, m_options.GetMainDirPath()},
-							   {Options::DESTDIR, m_options.GetDestDirPath()},
-							   {Options::INTERDIR, m_options.GetInterDirPath()},
-							   {Options::NZBDIR, m_options.GetNzbDirPath()},
-							   {Options::QUEUEDIR, m_options.GetQueueDirPath()}});
-		});
-}
-
-Status WebDirValidator::Validate(const fs::path& path)
-{
-	if (path.empty()) return Status::Ok();
-	return Directory::Exists(path).And(&Directory::Readable, path);
-}
-
 Status TempDirValidator::Validate() const
 {
 	return Validate(m_options.GetTempDirPath())
@@ -170,8 +147,7 @@ Status TempDirValidator::Validate() const
 								   {Options::DESTDIR, m_options.GetDestDirPath()},
 								   {Options::INTERDIR, m_options.GetInterDirPath()},
 								   {Options::NZBDIR, m_options.GetNzbDirPath()},
-								   {Options::QUEUEDIR, m_options.GetQueueDirPath()},
-								   {Options::WEBDIR, m_options.GetWebDirPath()}});
+								   {Options::QUEUEDIR, m_options.GetQueueDirPath()}});
 			});
 }
 
@@ -202,7 +178,6 @@ Status ScriptDirValidator::Validate() const
 								   {Options::INTERDIR, m_options.GetInterDirPath()},
 								   {Options::NZBDIR, m_options.GetNzbDirPath()},
 								   {Options::QUEUEDIR, m_options.GetQueueDirPath()},
-								   {Options::WEBDIR, m_options.GetWebDirPath()},
 								   {Options::TEMPDIR, m_options.GetTempDirPath()}});
 			});
 		if (!status.IsOk())
@@ -266,7 +241,6 @@ Status CertStoreValidator::Validate() const
 								   {Options::INTERDIR, m_options.GetInterDirPath()},
 								   {Options::NZBDIR, m_options.GetNzbDirPath()},
 								   {Options::QUEUEDIR, m_options.GetQueueDirPath()},
-								   {Options::WEBDIR, m_options.GetWebDirPath()},
 								   {Options::TEMPDIR, m_options.GetTempDirPath()},
 								   {Options::CONFIGTEMPLATE, m_options.GetConfigTemplatePath()},
 								   {Options::LOGFILE, m_log.GetLogFilePath()},

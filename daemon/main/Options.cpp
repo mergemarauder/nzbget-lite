@@ -269,15 +269,8 @@ void Options::LocateOptionSrcPos(const char *optionName)
 
 void Options::InitDefaults()
 {
-#ifdef WIN32
-	SetOption(MAINDIR.data(), "${AppDir}");
-	SetOption(WEBDIR.data(), "${AppDir}\\webui");
-	SetOption(CONFIGTEMPLATE.data(), "${AppDir}\\nzbget.conf.template");
-#else
 	SetOption(MAINDIR.data(), "~/downloads");
-	SetOption(WEBDIR.data(), "");
 	SetOption(CONFIGTEMPLATE.data(), "");
-#endif
 	SetOption(TEMPDIR.data(), "${MainDir}/tmp");
 	SetOption(DESTDIR.data(), "${MainDir}/dst");
 	SetOption(INTERDIR.data(), "");
@@ -554,7 +547,6 @@ void Options::CheckDirs()
 	CheckDir(m_interDir, INTERDIR.data(), m_mainDir, true, true);
 	CheckDir(m_tempDir, TEMPDIR.data(), m_mainDir, false, true);
 	CheckDir(m_queueDir, QUEUEDIR.data(), m_mainDir, false, true);
-	CheckDir(m_webDir, WEBDIR.data(), nullptr, true, false);
 	CheckDir(m_scriptDir, SCRIPTDIR.data(), m_mainDir, true, true);
 	CheckDir(m_nzbDir, NZBDIR.data(), m_mainDir, false, true);
 
@@ -563,7 +555,6 @@ void Options::CheckDirs()
 	m_interDirPath = fs::u8path(*m_interDir);
 	m_tempDirPath = fs::u8path(*m_tempDir);
 	m_queueDirPath = fs::u8path(*m_queueDir);
-	m_webDirPath = fs::u8path(*m_webDir);
 	m_nzbDirPath = fs::u8path(*m_nzbDir);
 
 	Tokenizer tokDir(g_Options->GetScriptDir(), ",;");
@@ -1825,16 +1816,6 @@ void Options::CheckOptions()
 		m_directRename = false;
 	}
 
-	// if option "ConfigTemplate" is not set, use "WebDir" as default location for template
-	// (for compatibility with versions 9 and 10).
-	if (m_configTemplate.Empty() && !m_noDiskAccess && !m_webDir.Empty())
-	{
-		m_configTemplate.Format("%s%c%s", *m_webDir, PATH_SEPARATOR, "nzbget.conf");
-		if (!FileSystem::FileExists(m_configTemplate))
-		{
-			m_configTemplate = "";
-		}
-	}
 
 	if (m_articleCache < 0)
 	{

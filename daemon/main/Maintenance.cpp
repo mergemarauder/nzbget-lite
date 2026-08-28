@@ -146,7 +146,7 @@ bool Maintenance::CheckUpdates(CString& updateInfo)
 
 bool Maintenance::ReadPackageInfoStr(const char* key, CString& value)
 {
-	BString<1024> fileName("%s%cpackage-info.json", g_Options->GetWebDir(), PATH_SEPARATOR);
+	BString<1024> fileName("%s%cpackage-info.json", g_Options->GetAppDir(), PATH_SEPARATOR);
 
 	CharBuffer packageInfo;
 	if (!FileSystem::LoadFileIntoBuffer(fileName, packageInfo, true))
