@@ -26,7 +26,6 @@
 #include "Log.h"
 #include "HistoryCoordinator.h"
 #include "DupeCoordinator.h"
-#include "PostScript.h"
 #include "Util.h"
 #include "FileSystem.h"
 #include "UnpackController.h"
@@ -34,7 +33,6 @@
 #include "Rename.h"
 #include "Repair.h"
 #include "NzbFile.h"
-#include "QueueScript.h"
 #include "ParParser.h"
 #include "DirectUnpack.h"
 #include "PostUnpackRenamer.h"
@@ -230,10 +228,6 @@ void PrePostProcessor::DownloadQueueUpdate(void* aspect)
 	{
 		NzbAdded(queueAspect->downloadQueue, queueAspect->nzbInfo);
 	}
-	else if (queueAspect->action == DownloadQueue::eaNzbNamed)
-	{
-		g_QueueScriptCoordinator->EnqueueScript(queueAspect->nzbInfo, QueueScriptCoordinator::qeNzbNamed);
-	}
 	else if (queueAspect->action == DownloadQueue::eaNzbDeleted &&
 		queueAspect->nzbInfo->GetDeleting() &&
 		!queueAspect->nzbInfo->GetPostInfo() &&
@@ -284,7 +278,6 @@ void PrePostProcessor::DownloadQueueUpdate(void* aspect)
 		{
 			queueAspect->nzbInfo->PrintMessage(Message::mkInfo,
 				"Collection %s completely downloaded", queueAspect->nzbInfo->GetName());
-			g_QueueScriptCoordinator->EnqueueScript(queueAspect->nzbInfo, QueueScriptCoordinator::qeNzbDownloaded);
 			NzbDownloaded(queueAspect->downloadQueue, queueAspect->nzbInfo);
 		}
 		else if ((queueAspect->action == DownloadQueue::eaFileDeleted ||
@@ -328,10 +321,6 @@ void PrePostProcessor::NzbAdded(DownloadQueue* downloadQueue, NzbInfo* nzbInfo)
 	{
 		NzbCompleted(downloadQueue, nzbInfo, false);
 	}
-	else
-	{
-		g_QueueScriptCoordinator->EnqueueScript(nzbInfo, QueueScriptCoordinator::qeNzbAdded);
-	}
 }
 
 void PrePostProcessor::NzbDownloaded(DownloadQueue* downloadQueue, NzbInfo* nzbInfo)
@@ -352,7 +341,6 @@ void PrePostProcessor::NzbDownloaded(DownloadQueue* downloadQueue, NzbInfo* nzbI
 	if (nzbInfo->GetDeleteStatus() == NzbInfo::dsHealth ||
 		nzbInfo->GetDeleteStatus() == NzbInfo::dsBad)
 	{
-		g_QueueScriptCoordinator->EnqueueScript(nzbInfo, QueueScriptCoordinator::qeNzbDeleted);
 	}
 
 	if (!nzbInfo->GetPostInfo() && !g_Options->GetRawArticle() && !g_Options->GetSkipWrite() && !nzbInfo->GetSkipDiskWrite())
@@ -448,7 +436,6 @@ void PrePostProcessor::NzbCompleted(DownloadQueue* downloadQueue, NzbInfo* nzbIn
 		nzbInfo->GetDeleteStatus() != NzbInfo::dsBad)
 		// nzbs deleted by health check or marked as bad are processed as downloaded with failure status
 	{
-		g_QueueScriptCoordinator->EnqueueScript(nzbInfo, QueueScriptCoordinator::qeNzbDeleted);
 	}
 
 	if (!addToHistory)
@@ -645,7 +632,6 @@ NzbInfo* PrePostProcessor::PickNextJob(DownloadQueue* downloadQueue, bool allowP
 	for (NzbInfo* nzbInfo1: downloadQueue->GetQueue())
 	{
 		if (nzbInfo1->GetPostInfo() && !nzbInfo1->GetPostInfo()->GetWorking() &&
-			!g_QueueScriptCoordinator->HasJob(nzbInfo1->GetId(), nullptr) &&
 			nzbInfo1->GetDirectUnpackStatus() != NzbInfo::nsRunning &&
 			(!nzbInfo || nzbInfo1->GetPriority() > nzbInfo->GetPriority()) &&
 			(!g_WorkState->GetPausePostProcess() || nzbInfo1->GetForcePriority()) &&
@@ -888,8 +874,7 @@ void PrePostProcessor::StartJob(DownloadQueue* downloadQueue, PostInfo* postInfo
 	}
 	else
 	{
-		EnterStage(downloadQueue, postInfo, PostInfo::ptExecutingScript);
-		PostScriptController::StartJob(postInfo);
+		JobCompleted(downloadQueue, postInfo);
 	}
 }
 
@@ -1035,11 +1020,6 @@ bool PrePostProcessor::PostQueueDelete(DownloadQueue* downloadQueue, IdList* idL
 
 void PrePostProcessor::FileDownloaded(DownloadQueue* downloadQueue, NzbInfo* nzbInfo, FileInfo* fileInfo)
 {
-	if (!nzbInfo->GetPostInfo())
-	{
-		g_QueueScriptCoordinator->EnqueueScript(nzbInfo, QueueScriptCoordinator::qeFileDownloaded);
-	}
-
 	if (g_Options->GetDirectUnpack() && !g_Options->GetRawArticle() && !g_Options->GetSkipWrite() && !nzbInfo->GetSkipDiskWrite())
 	{
 		bool allowPar;

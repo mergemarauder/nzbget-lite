@@ -25,7 +25,6 @@
 #include "NzbFile.h"
 #include "HistoryCoordinator.h"
 #include "DupeCoordinator.h"
-#include "QueueScript.h"
 
 bool DupeCoordinator::SameNameOrKey(const char* name1, const char* dupeKey1,
 	const char* name2, const char* dupeKey2)
@@ -423,7 +422,6 @@ void DupeCoordinator::HistoryMark(DownloadQueue* downloadQueue, HistoryInfo* his
 	if (historyInfo->GetKind() == HistoryInfo::hkNzb)
 	{
 		historyInfo->GetNzbInfo()->SetMarkStatus(markStatus);
-		g_QueueScriptCoordinator->EnqueueScript(historyInfo->GetNzbInfo(), QueueScriptCoordinator::qeNzbMarked);
 	}
 	else if (historyInfo->GetKind() == HistoryInfo::hkDup)
 	{

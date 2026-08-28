@@ -45,8 +45,7 @@ The health check covers multiple sections (representative list):
 - `Logging` — Log file and rotation settings.
 - `SchedulerTasks` — Scheduler-related checks.
 - `CheckAndRepair` — PAR/repair and CRC checks.
-- `Unpack` — Unpacker/extension handling.
-- `ExtensionScripts` — Script availability and permissions.
+- `Unpack` — Unpacker configuration.
 
 ### Example
 ```json

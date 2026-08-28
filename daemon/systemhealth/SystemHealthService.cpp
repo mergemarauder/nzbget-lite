@@ -19,14 +19,12 @@
 
 #include "nzbget.h"
 
-#include "ExtensionManager.h"
 #include "SystemHealthService.h"
 #include "PathsValidator.h"
 #include "IncomingNzbValidator.h"
 #include "SchedulerTasksValidator.h"
 #include "NewsServersValidator.h"
 #include "LoggingValidator.h"
-#include "ExtensionScriptsValidator.h"
 #include "ConnectionValidator.h"
 #include "DownloadQueueValidator.h"
 #include "SecurityValidator.h"
@@ -58,8 +56,6 @@ Service::Service(const Options& options, const Servers& servers, const ::Feeds& 
 	m_validators.push_back(std::make_unique<NewsServers::NewsServersValidator>(m_servers));
 	m_validators.push_back(std::make_unique<Display::DisplayValidator>(m_options));
 	m_validators.push_back(std::make_unique<Logging::LoggingValidator>(m_options));
-	m_validators.push_back(std::make_unique<ExtensionScripts::ExtensionScriptsValidator>(
-		m_options, *g_ExtensionManager));
 	m_validators.push_back(std::make_unique<Connection::ConnectionValidator>(m_options));
 	m_validators.push_back(std::make_unique<DownloadQueue::DownloadQueueValidator>(m_options));
 	m_validators.push_back(std::make_unique<Security::SecurityValidator>(m_options));

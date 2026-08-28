@@ -182,7 +182,6 @@ private:
 	static int m_idGen;
 	int m_nzbDirInterval = 0;
 	int m_pass = 0;
-	bool m_scanScript = false;
 	
 	/**
 	 * @brief Detects the category from the NZB file and sets it in the NzbInfo object.

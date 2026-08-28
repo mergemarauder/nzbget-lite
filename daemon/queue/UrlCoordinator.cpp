@@ -30,7 +30,6 @@
 #include "NzbFile.h"
 #include "Scanner.h"
 #include "DiskState.h"
-#include "QueueScript.h"
 
 void UrlDownloader::ProcessHeader(const char* line)
 {
@@ -397,7 +396,6 @@ void UrlCoordinator::UrlCompleted(UrlDownloader* urlDownloader)
 
 	// the rest of function is only for failed URLs or for failed scans
 
-	g_QueueScriptCoordinator->EnqueueScript(nzbInfo, QueueScriptCoordinator::qeUrlCompleted);
 
 	{
 		GuardedDownloadQueue downloadQueue = DownloadQueue::Guard();

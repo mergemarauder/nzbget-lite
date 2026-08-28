@@ -28,7 +28,6 @@
 #include "ServerPool.h"
 #include "FeedInfo.h"
 #include "FeedCoordinator.h"
-#include "SchedulerScript.h"
 
 void Scheduler::AddTask(std::unique_ptr<Task> task)
 {
@@ -221,10 +220,6 @@ void Scheduler::ExecuteTask(Task* task)
 
 		case scExtensions:
 		case scProcess:
-			if (executeProcess)
-			{
-				SchedulerScriptController::StartScript(task->m_param.c_str(), task->m_command == scProcess, task->m_id);
-			}
 			break;
 
 		case scActivateServer:

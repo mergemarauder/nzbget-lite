@@ -34,10 +34,7 @@
 #include "ArticleWriter.h"
 #include "DiskState.h"
 #include "ScriptConfig.h"
-#include "QueueScript.h"
-#include "CommandScript.h"
 #include "UrlCoordinator.h"
-#include "ExtensionManager.h"
 #include "SystemInfo.h"
 #include "Benchmark.h"
 #include "NetworkSpeedTest.h"
@@ -234,36 +231,6 @@ public:
 };
 
 class LoadConfigXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class LoadExtensionsXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class DownloadExtensionXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class UpdateExtensionXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class DeleteExtensionXmlCommand final : public SafeXmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class TestExtensionXmlCommand final : public SafeXmlCommand
 {
 public:
 	void Execute() override;
@@ -488,19 +455,6 @@ public:
 		return result;
 	}
 };
-
-class StartScriptXmlCommand final : public XmlCommand
-{
-public:
-	void Execute() override;
-};
-
-class LogScriptXmlCommand final : public LogXmlCommand
-{
-protected:
-	virtual GuardedMessageList GuardMessages();
-};
-
 
 //*****************************************************************
 // XmlRpcProcessor
@@ -873,26 +827,6 @@ std::unique_ptr<XmlCommand> XmlRpcProcessor::CreateCommand(const char* methodNam
 	{
 		command = std::make_unique<LoadConfigXmlCommand>();
 	}
-	else if (!strcasecmp(methodName, "loadextensions"))
-	{
-		command = std::make_unique<LoadExtensionsXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "downloadextension"))
-	{
-		command = std::make_unique<DownloadExtensionXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "updateextension"))
-	{
-		command = std::make_unique<UpdateExtensionXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "deleteextension"))
-	{
-		command = std::make_unique<DeleteExtensionXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "testextension"))
-	{
-		command = std::make_unique<TestExtensionXmlCommand>();
-	}
 	else if (!strcasecmp(methodName, "saveconfig"))
 	{
 		command = std::make_unique<SaveConfigXmlCommand>();
@@ -956,14 +890,6 @@ std::unique_ptr<XmlCommand> XmlRpcProcessor::CreateCommand(const char* methodNam
 	else if (!strcasecmp(methodName, "testnetworkspeed"))
 	{
 		command = std::make_unique<TestNetworkSpeedXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "startscript"))
-	{
-		command = std::make_unique<StartScriptXmlCommand>();
-	}
-	else if (!strcasecmp(methodName, "logscript"))
-	{
-		command = std::make_unique<LogScriptXmlCommand>();
 	}
 	else
 	{
@@ -1661,7 +1587,7 @@ void StatusXmlCommand::Execute()
 	int serverTime = (int)Util::CurrentTime();
 	int resumeTime = (int)g_WorkState->GetResumeTime();
 	bool feedActive = g_FeedCoordinator->HasActiveDownloads();
-	int queuedScripts = g_QueueScriptCoordinator->GetQueueSize();
+	int queuedScripts = 0;
 
 	AppendFmtResponse(IsJson() ? JSON_STATUS_START : XML_STATUS_START,
 		remainingSizeLo, remainingSizeHi, remainingMBytes, forcedSizeLo,
@@ -2333,13 +2259,7 @@ const char* ListGroupsXmlCommand::DetectStatus(NzbInfo* nzbInfo)
 
 	if (nzbInfo->GetPostInfo())
 	{
-		bool queueScriptActive = false;
-		if (nzbInfo->GetPostInfo()->GetStage() == PostInfo::ptQueued &&
-			g_QueueScriptCoordinator->HasJob(nzbInfo->GetId(), &queueScriptActive))
-		{
-			status = queueScriptActive ? "QS_EXECUTING" : "QS_QUEUED";
-		}
-		else if (nzbInfo->GetDirectUnpackStatus() == NzbInfo::nsRunning)
+		if (nzbInfo->GetDirectUnpackStatus() == NzbInfo::nsRunning)
 		{
 			status = "UNPACKING";
 		}
@@ -3058,170 +2978,6 @@ void LoadConfigXmlCommand::Execute()
 	AppendResponse(IsJson() ? "\n]" : "</data></array>\n");
 }
 
-void LoadExtensionsXmlCommand::Execute()
-{
-	bool loadFromDisk = false;
-	bool isJson = IsJson();
-
-	if (!NextParamAsBool(&loadFromDisk))
-	{
-		BuildErrorResponse(2, "Invalid parameter (Load from disk)");
-		return;
-	}
-
-	if (loadFromDisk)
-	{
-		const auto& error = g_ExtensionManager->LoadExtensions();
-		if (error)
-		{
-			BuildErrorResponse(3, error.value().c_str());
-			return;
-		}
-	}
-
-	AppendResponse(isJson ? "[\n" : "<array><data>\n");
-
-	int index = 0;
-
-	g_ExtensionManager->ForEach([&](auto extension)
-		{
-			const std::string response = isJson
-				? Extension::ToJsonStr(*extension)
-				: Extension::ToXmlStr(*extension);
-
-			AppendCondResponse(",\n", isJson && index++ > 0);
-			AppendResponse(response.c_str());
-		}
-	);
-
-	AppendResponse(isJson ? "\n]" : "</data></array>\n");
-}
-
-void DownloadExtensionXmlCommand::Execute()
-{
-	char* url;
-	if (!NextParamAsStr(&url))
-	{
-		BuildErrorResponse(2, "Invalid parameter (URL)");
-		return;
-	}
-	DecodeStr(url);
-
-	char* extName;
-	if (!NextParamAsStr(&extName))
-	{
-		BuildErrorResponse(2, "Invalid parameter (Extension name)");
-		return;
-	}
-	DecodeStr(extName);
-
-	if (Util::EmptyStr(g_Options->GetTempDir()))
-	{
-		BuildErrorResponse(3, "\"TempDir\" is not specified");
-		return;
-	}
-
-	const auto result = g_ExtensionManager->DownloadExtension(url, extName);
-	bool ok = std::get<0>(result) == WebDownloader::adFinished;
-	if (!ok)
-	{
-		BuildErrorResponse(3, "Failed to read URL");
-		return;
-	}
-
-	if (g_Options->GetScriptDirPaths().empty())
-	{
-		BuildErrorResponse(3, "\"ScriptDir\" is not specified");
-		return;
-	}
-
-	const auto& filename = std::get<1>(result);
-	const auto error = g_ExtensionManager->InstallExtension(filename, g_Options->GetScriptDirPaths().front());
-	if (error)
-	{
-		BuildErrorResponse(3, error.value().c_str());
-		return;
-	}
-
-	BuildBoolResponse(true);
-}
-
-void UpdateExtensionXmlCommand::Execute()
-{
-	char* url;
-	if (!NextParamAsStr(&url))
-	{
-		BuildErrorResponse(2, "Invalid parameter (URL)");
-		return;
-	}
-	DecodeStr(url);
-
-	char* extName;
-	if (!NextParamAsStr(&extName))
-	{
-		BuildErrorResponse(2, "Invalid parameter (Extension name)");
-		return;
-	}
-	DecodeStr(extName);
-
-	const auto result = g_ExtensionManager->DownloadExtension(url, extName);
-	bool ok = std::get<0>(result) == WebDownloader::adFinished;
-	if (!ok)
-	{
-		BuildErrorResponse(3, "Failed to read URL");
-		return;
-	}
-
-	const auto filename = std::get<1>(result);
-	const auto error = g_ExtensionManager->UpdateExtension(filename, extName);
-	if (error)
-	{
-		BuildErrorResponse(3, error.value().c_str());
-		return;
-	}
-
-	BuildBoolResponse(true);
-}
-
-void DeleteExtensionXmlCommand::Execute()
-{
-	char* extName;
-	if (!NextParamAsStr(&extName))
-	{
-		BuildErrorResponse(2, "Invalid parameter (Extension name)");
-		return;
-	}
-	DecodeStr(extName);
-
-	const auto error = g_ExtensionManager->DeleteExtension(extName);
-	if (error)
-	{
-		BuildErrorResponse(2, error.value().c_str());
-		return;
-	}
-
-	BuildBoolResponse(true);
-}
-
-void TestExtensionXmlCommand::Execute()
-{
-	char* extEntryFileName;
-	if (!NextParamAsStr(&extEntryFileName))
-	{
-		BuildErrorResponse(2, "Invalid parameter (Extension entry file name)");
-		return;
-	}
-	DecodeStr(extEntryFileName);
-
-	const auto found = Util::FindExecutorProgram(extEntryFileName, g_Options->GetShellOverride());
-	if (!found)
-	{
-		BuildErrorResponse(2, "Failed to find the corresponding executor");
-		return;
-	}
-
-	BuildBoolResponse(true);
-}
 
 // bool saveconfig(struct[] data)
 void SaveConfigXmlCommand::Execute()
@@ -4160,41 +3916,4 @@ void TestNetworkSpeedXmlCommand::Execute()
 		BuildErrorResponse(2, e.what());
 		g_WorkState->SetPauseDownload(false);
 	}
-}
-
-// bool startscript(string script, string command, string context, struct[] options);
-void StartScriptXmlCommand::Execute()
-{
-	char* script;
-	char* command;
-	char* context;
-	if (!NextParamAsStr(&script) || !NextParamAsStr(&command) || !NextParamAsStr(&context))
-	{
-		BuildErrorResponse(2, "Invalid parameter");
-		return;
-	}
-
-	std::unique_ptr<Options::OptEntries> optEntries = std::make_unique<Options::OptEntries>();
-
-	char* name;
-	char* value;
-	char* dummy;
-	while ((IsJson() && NextParamAsStr(&dummy) && NextParamAsStr(&name) &&
-		NextParamAsStr(&dummy) && NextParamAsStr(&value)) ||
-		(!IsJson() && NextParamAsStr(&name) && NextParamAsStr(&value)))
-	{
-		DecodeStr(name);
-		DecodeStr(value);
-		optEntries->emplace_back(name, value);
-	}
-
-	bool ok = CommandScriptController::StartScript(script, command, std::move(optEntries));
-
-	BuildBoolResponse(ok);
-}
-
-// struct[] logscript(idfrom, entries)
-GuardedMessageList LogScriptXmlCommand::GuardMessages()
-{
-	return g_CommandScriptLog->GuardMessages();
 }

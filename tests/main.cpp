@@ -26,7 +26,6 @@
 #include "Log.h"
 #include "Options.h"
 #include "WorkState.h"
-#include "ScriptConfig.h"
 #include "QueueCoordinator.h"
 #include "UrlCoordinator.h"
 #include "DiskState.h"
@@ -39,11 +38,9 @@
 #include "Maintenance.h"
 #include "ArticleWriter.h"
 #include "StatMeter.h"
-#include "QueueScript.h"
-#include "CommandScript.h"
-#include "ExtensionManager.h"
 #include "SystemInfo.h"
 #include "SystemHealth.h"
+#include "ScriptConfig.h"
 
 extern char** environ;
 char* (*g_EnvironmentVariables)[];
@@ -64,13 +61,10 @@ Scanner* g_Scanner;
 FeedCoordinator* g_FeedCoordinator;
 Maintenance* g_Maintenance;
 ArticleCache* g_ArticleCache;
-QueueScriptCoordinator* g_QueueScriptCoordinator;
 ServiceCoordinator* g_ServiceCoordinator;
-ScriptConfig* g_ScriptConfig;
-CommandScriptLog* g_CommandScriptLog;
-ExtensionManager::Manager* g_ExtensionManager;
 System::SystemInfo* g_SystemInfo;
 SystemHealth::Service* g_SystemHealth;
+ScriptConfig* g_ScriptConfig;
 
 #ifdef _WIN32
 #include "WinConsole.h"
@@ -102,7 +96,6 @@ struct InitGlobals
 		g_ServerPool = new ServerPool();
 		g_ServiceCoordinator = new ServiceCoordinator();
 		g_Scanner = new Scanner();
-		g_ExtensionManager = new ExtensionManager::Manager();
 #ifdef _WIN32
 		WinConsole* g_WinConsole = new WinConsole();
 #endif
@@ -117,7 +110,6 @@ struct InitGlobals
 		delete g_DiskState;
 		delete g_Scanner;
 		delete g_ServiceCoordinator;
-		delete g_ExtensionManager;
 #ifdef _WIN32
 		delete g_WinConsole;
 #endif

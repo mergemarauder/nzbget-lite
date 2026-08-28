@@ -62,7 +62,6 @@ If HTTP basic authentication is somewhat problematic the username/password can a
 - [log](LOG.md)
 - [writelog](WRITELOG.md)
 - [loadlog](LOADLOG.md)
-- [logscript](LOGSCRIPT.md)
 - [logupdate](LOGUPDATE.md)
 - [servervolumes](SERVERVOLUMES.md)
 - [resetservervolume](RESETSERVERVOLUME.md)
@@ -87,14 +86,9 @@ If HTTP basic authentication is somewhat problematic the username/password can a
 
 ## Extensions
 
-- [loadextensions](LOADEXTENSIONS.md)
-- [downloadextension](DOWNLOADEXTENSION.md)
-- [updateextension](UPDATEEXTENSION.md)
-- [deleteextension](DELETEEXTENSION.md)
 
 ## Tests
 
-- [testextension](TESTEXTENSION.md)
 - [testserver](TESTSERVER.md)
 - [testserverspeed](TESTSERVERSPEED.md)
 - [testdiskspeed](TESTDISKSPEED.md)

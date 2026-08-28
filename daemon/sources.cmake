@@ -5,19 +5,6 @@ set(SRC
 	${CMAKE_SOURCE_DIR}/daemon/connect/HttpClient.cpp
 	${CMAKE_SOURCE_DIR}/daemon/connect/NetworkSpeedTest.cpp
 
-	${CMAKE_SOURCE_DIR}/daemon/extension/CommandScript.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/FeedScript.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/NzbScript.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/PostScript.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/QueueScript.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/ScanScript.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/SchedulerScript.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/ScriptConfig.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/Extension.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/ExtensionLoader.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/ExtensionManager.cpp
-	${CMAKE_SOURCE_DIR}/daemon/extension/ManifestFile.cpp
-
 	${CMAKE_SOURCE_DIR}/daemon/feed/FeedCoordinator.cpp
 	${CMAKE_SOURCE_DIR}/daemon/feed/FeedFile.cpp
 	${CMAKE_SOURCE_DIR}/daemon/feed/FeedFilter.cpp
@@ -29,6 +16,7 @@ set(SRC
 	${CMAKE_SOURCE_DIR}/daemon/frontend/NCursesFrontend.cpp
 
 	${CMAKE_SOURCE_DIR}/daemon/main/CommandLineParser.cpp
+	${CMAKE_SOURCE_DIR}/daemon/main/ScriptConfig.cpp
 	${CMAKE_SOURCE_DIR}/daemon/main/DiskService.cpp
 	${CMAKE_SOURCE_DIR}/daemon/main/Maintenance.cpp
 	${CMAKE_SOURCE_DIR}/daemon/main/Options.cpp
@@ -117,7 +105,6 @@ set(SRC
 	${CMAKE_SOURCE_DIR}/daemon/systemhealth/SchedulerTasksValidator.cpp
 	${CMAKE_SOURCE_DIR}/daemon/systemhealth/SchedulerTaskValidator.cpp
 	${CMAKE_SOURCE_DIR}/daemon/systemhealth/LoggingValidator.cpp
-	${CMAKE_SOURCE_DIR}/daemon/systemhealth/ExtensionScriptsValidator.cpp
 	${CMAKE_SOURCE_DIR}/daemon/systemhealth/UnpackValidator.cpp
 	${CMAKE_SOURCE_DIR}/daemon/systemhealth/SecurityValidator.cpp
 	${CMAKE_SOURCE_DIR}/daemon/systemhealth/IncomingNzbValidator.cpp
@@ -133,7 +120,6 @@ set(SRC
 
 set(INCLUDES ${INCLUDES}
 	${CMAKE_SOURCE_DIR}/daemon/connect
-	${CMAKE_SOURCE_DIR}/daemon/extension
 	${CMAKE_SOURCE_DIR}/daemon/feed
 	${CMAKE_SOURCE_DIR}/daemon/frontend
 	${CMAKE_SOURCE_DIR}/daemon/main

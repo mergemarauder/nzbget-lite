@@ -29,7 +29,6 @@
 #include "FileSystem.h"
 #include "FeedFile.h"
 #include "FeedFilter.h"
-#include "FeedScript.h"
 #include "DiskState.h"
 #include "DupeCoordinator.h"
 #include "UrlCoordinator.h"
@@ -358,16 +357,6 @@ void FeedCoordinator::FeedCompleted(FeedDownloader* feedDownloader)
 	{
 		if (!feedInfo->GetPreview())
 		{
-			bool scriptSuccess = true;
-			FeedScriptController::ExecuteScripts(
-				!Util::EmptyStr(feedInfo->GetExtensions()) ? feedInfo->GetExtensions(): g_Options->GetExtensions(),
-				feedInfo->GetOutputFilename(), feedInfo->GetId(), &scriptSuccess);
-			if (!scriptSuccess)
-			{
-				feedInfo->SetStatus(FeedInfo::fsFailed);
-				return;
-			}
-
 			std::unique_ptr<FeedFile> feedFile = parseFeed(feedInfo);
 
 			std::vector<std::unique_ptr<NzbInfo>> addedNzbs;
@@ -610,10 +599,6 @@ std::shared_ptr<FeedItemList> FeedCoordinator::PreviewFeed(int id,
 		{
 			return nullptr;
 		}
-
-		FeedScriptController::ExecuteScripts(
-			!Util::EmptyStr(feedInfo->GetExtensions()) ? feedInfo->GetExtensions(): g_Options->GetExtensions(),
-			feedInfo->GetOutputFilename(), feedInfo->GetId(), nullptr);
 
 		std::unique_ptr<FeedFile> feedFile = parseFeed(feedInfo.get());
 		if (!feedFile)

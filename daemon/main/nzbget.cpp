@@ -28,7 +28,6 @@
 #include "Options.h"
 #include "WorkState.h"
 #include "CommandLineParser.h"
-#include "ScriptConfig.h"
 #include "Thread.h"
 #include "ColoredFrontend.h"
 #include "NCursesFrontend.h"
@@ -50,14 +49,12 @@
 #include "Maintenance.h"
 #include "ArticleWriter.h"
 #include "StatMeter.h"
-#include "QueueScript.h"
 #include "Util.h"
 #include "FileSystem.h"
 #include "StackTrace.h"
-#include "CommandScript.h"
-#include "ExtensionManager.h"
 #include "SystemInfo.h"
 #include "SystemHealth.h"
+#include "ScriptConfig.h"
 
 #ifdef WIN32
 #include "WinService.h"
@@ -95,13 +92,10 @@ Scanner* g_Scanner;
 FeedCoordinator* g_FeedCoordinator;
 Maintenance* g_Maintenance;
 ArticleCache* g_ArticleCache;
-QueueScriptCoordinator* g_QueueScriptCoordinator;
 ServiceCoordinator* g_ServiceCoordinator;
-ScriptConfig* g_ScriptConfig;
-CommandScriptLog* g_CommandScriptLog;
-ExtensionManager::Manager* g_ExtensionManager;
 System::SystemInfo* g_SystemInfo;
 SystemHealth::Service* g_SystemHealth;
+ScriptConfig* g_ScriptConfig;
 
 #ifdef WIN32
 WinConsole* g_WinConsole;
@@ -214,13 +208,10 @@ private:
 	std::unique_ptr<FeedCoordinator> m_feedCoordinator;
 	std::unique_ptr<Maintenance> m_maintenance;
 	std::unique_ptr<ArticleCache> m_articleCache;
-	std::unique_ptr<QueueScriptCoordinator> m_queueScriptCoordinator;
 	std::unique_ptr<ServiceCoordinator> m_serviceCoordinator;
-	std::unique_ptr<ScriptConfig> m_scriptConfig;
-	std::unique_ptr<CommandScriptLog> m_commandScriptLog;
-	std::unique_ptr<ExtensionManager::Manager> m_extensionManager;
 	std::unique_ptr<System::SystemInfo> m_systemInfo;
 	std::unique_ptr<SystemHealth::Service> m_systemHealth;
+	std::unique_ptr<ScriptConfig> m_scriptConfig;
 
 #ifdef WIN32
 	std::unique_ptr<WinConsole> m_winConsole;
@@ -289,6 +280,9 @@ void NZBGet::Init()
 #endif
 
 	BootConfig();
+	m_scriptConfig = std::make_unique<ScriptConfig>();
+	g_ScriptConfig = m_scriptConfig.get();
+	m_scriptConfig->InitOptions();
 
 	if (g_Options->GetSystemHealthCheck())
 	{
@@ -325,7 +319,6 @@ void NZBGet::Init()
 #endif
 
 	m_scanner->InitOptions();
-	m_queueScriptCoordinator->InitOptions();
 #ifndef DISABLE_TLS
 	TlsSocket::InitOptions(g_Options->GetCertCheck() ? g_Options->GetCertStore() : "");
 #endif
@@ -432,20 +425,8 @@ void NZBGet::CreateGlobals()
 	m_maintenance = std::make_unique<Maintenance>();
 	g_Maintenance = m_maintenance.get();
 
-	m_queueScriptCoordinator = std::make_unique<QueueScriptCoordinator>();
-	g_QueueScriptCoordinator = m_queueScriptCoordinator.get();
-
 	m_diskState = std::make_unique<DiskState>();
 	g_DiskState = m_diskState.get();
-
-	m_scriptConfig = std::make_unique<ScriptConfig>();
-	g_ScriptConfig = m_scriptConfig.get();
-
-	m_commandScriptLog = std::make_unique<CommandScriptLog>();
-	g_CommandScriptLog = m_commandScriptLog.get();
-
-	m_extensionManager = std::make_unique<ExtensionManager::Manager>();
-	g_ExtensionManager = m_extensionManager.get();
 
 	m_systemInfo = std::make_unique<System::SystemInfo>();
 	g_SystemInfo = m_systemInfo.get();
@@ -496,9 +477,6 @@ void NZBGet::BootConfig()
 	m_serverPool->SetTimeout(m_options->GetArticleTimeout());
 	m_serverPool->SetRetryInterval(m_options->GetArticleInterval());
 
-	m_scriptConfig->InitOptions();
-
-	m_extensionManager->LoadExtensions();
 }
 
 void NZBGet::Cleanup()
@@ -518,15 +496,11 @@ void NZBGet::Cleanup()
 	g_DupeCoordinator = nullptr;
 	g_QueueCoordinator = nullptr;
 	g_DiskState = nullptr;
-	g_ScriptConfig = nullptr;
 	g_ServerPool = nullptr;
 	g_FeedCoordinator = nullptr;
 	g_ArticleCache = nullptr;
-	g_QueueScriptCoordinator = nullptr;
 	g_Maintenance = nullptr;
 	g_StatMeter = nullptr;
-	g_CommandScriptLog = nullptr;
-	g_ExtensionManager = nullptr;
 
 #ifdef WIN32
 	g_WinConsole = nullptr;
@@ -980,7 +954,6 @@ void NZBGet::Stop(bool reload)
 			m_prePostProcessor->Stop();
 			m_feedCoordinator->Stop();
 			m_articleCache->Stop();
-			m_queueScriptCoordinator->Stop();
 #ifdef WIN32
 			m_winConsole->Stop();
 #endif

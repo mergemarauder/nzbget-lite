@@ -31,7 +31,6 @@
 #include "WorkState.h"
 #include "Log.h"
 #include "QueueCoordinator.h"
-#include "ScanScript.h"
 #include "Util.h"
 #include "FileSystem.h"
 #include "Unpack.h"
@@ -97,7 +96,6 @@ void Scanner::QueueData::SetNzbId(int nzbId)
 void Scanner::InitOptions()
 {
 	m_nzbDirInterval = 1;
-	m_scanScript = ScanScriptController::HasScripts();
 
 	CleanupStaleUnpackDir();
 }
@@ -141,21 +139,13 @@ void Scanner::ServiceWork()
 	}
 
 	CheckIncomingNzbs(g_Options->GetNzbDir(), "", checkStat);
-	if (!checkStat && m_scanScript)
-	{
-		// if immediate scan requested, we need second scan to process files extracted by scan-scripts
-		CheckIncomingNzbs(g_Options->GetNzbDir(), "", checkStat);
-	}
 	m_scanning = false;
 
-	// if NzbDirFileAge is less than NzbDirInterval (that can happen if NzbDirInterval
-	// is set for rare scans like once per hour) we make 4 scans:
-	//   - one additional scan is necessary to check sizes of detected files;
-	//   - another scan is required to check files which were extracted by scan-scripts;
-	//   - third scan is needed to check sizes of extracted files.
+	// Schedule one additional scan when file-age checking is more frequent than
+	// the normal incoming-directory interval.
 	if (g_Options->GetNzbDirInterval() > 0 && g_Options->GetNzbDirFileAge() < g_Options->GetNzbDirInterval())
 	{
-		int maxPass = m_scanScript ? 3 : 1;
+		int maxPass = 1;
 		if (m_pass < maxPass)
 		{
 			// scheduling another scan of incoming directory in NzbDirFileAge seconds.
@@ -421,33 +411,6 @@ void Scanner::ProcessIncomingFile(
 
 	bool exists = true;
 
-	if (m_scanScript && strcasecmp(extension, ".nzb_processed"))
-	{
-		ScanScriptController::ExecuteScripts(fullFilename,
-			nzbInfo, 
-			directory,
-			nzbName,
-			nzbCategory,
-			&priority,
-			&parameters,
-			&addTop,
-			&addPaused,
-			dupeKey,
-			&dupeScore,
-			&dupeMode
-		);
-		exists = FileSystem::FileExists(fullFilename);
-		if (exists && strcasecmp(extension, ".nzb"))
-		{
-			CString bakname2;
-			bool renameOK = FileSystem::RenameBak(fullFilename, "processed", false, bakname2);
-			if (!renameOK)
-			{
-				error("Could not rename file %s to %s: %s", fullFilename, *bakname2,
-					*FileSystem::GetLastErrorMessage());
-			}
-		}
-	}
 
 	if (!strcasecmp(extension, ".nzb_processed"))
 	{
@@ -509,57 +472,16 @@ void Scanner::ProcessIncomingFile(
 void Scanner::InitPPParameters(const char* category, NzbParameterList* parameters, bool reset)
 {
 	bool unpack = g_Options->GetUnpack();
-	const char* extensions = g_Options->GetExtensions();
-
 	if (!Util::EmptyStr(category))
 	{
 		Options::Category* categoryObj = g_Options->FindCategory(category, false);
-		if (categoryObj)
-		{
-			unpack = categoryObj->GetUnpack();
-			if (!Util::EmptyStr(categoryObj->GetExtensions()))
-			{
-				extensions = categoryObj->GetExtensions();
-			}
-		}
+		if (categoryObj) unpack = categoryObj->GetUnpack();
 	}
-
-	if (reset)
-	{
-		g_ExtensionManager->ForEach([&parameters](auto script)
-			{
-				parameters->SetParameter(BString<1024>("%s:", script->GetName()), nullptr);
-			}
-		);
-	}
-
 	if (!parameters->Find("*Unpack:"))
 	{
 		parameters->SetParameter("*Unpack:", unpack ? "yes" : "no");
 	}
-
-	if (!Util::EmptyStr(extensions))
-	{
-		// create pp-parameter for each post-processing or queue- script
-		g_ExtensionManager->ForEach(
-			[&](auto script)
-			{
-				Tokenizer tok(extensions, ",;");
-				while (const char* scriptName = tok.Next())
-				{
-					if (strcmp(scriptName, script->GetName()) != 0) continue;
-
-					BString<1024> paramName("%s:", scriptName);
-					if ((script->GetPostScript() || script->GetQueueScript()) &&
-						!parameters->Find(paramName))
-					{
-						parameters->SetParameter(paramName, "yes");
-					}
-				}
-			});
-	}
 }
-
 CString Scanner::ResolveCategory(const char* category, const char* filename)
 {
 	CString useCategory = category ? category : "";

@@ -2,7 +2,7 @@
 
 NZBGet Lite is a Linux-only, API-only fork of
 [NZBGet](https://github.com/nzbgetcom/nzbget). It keeps the downloader,
-JSON-RPC/XML-RPC APIs, command-line client, extension system, and native Linux
+JSON-RPC/XML-RPC APIs, command-line client, and native Linux
 daemon while removing the bundled web UI, static-file server, Docker image,
 non-Linux ports, and platform packaging infrastructure.
 
