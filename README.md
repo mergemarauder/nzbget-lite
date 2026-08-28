@@ -3,8 +3,8 @@
 NZBGet Lite is a Linux-only, API-only fork of
 [NZBGet](https://github.com/nzbgetcom/nzbget). It keeps the downloader,
 JSON-RPC/XML-RPC APIs, command-line client, and native Linux
-daemon while removing the bundled web UI, static-file server, Docker image,
-non-Linux ports, and platform packaging infrastructure.
+daemon while removing the bundled web UI, extension runtime, static-file
+server, non-Linux ports, and platform packaging infrastructure.
 
 There is intentionally no browser interface. Non-RPC HTTP routes return
 `404 Not Found`.
@@ -35,6 +35,32 @@ ctest --test-dir build --output-on-failure
 ```
 
 Install with `sudo cmake --install build`.
+
+## Container
+
+The published image is `ghcr.io/mergemarauder/nzbget-lite:latest`. It supports
+64-bit x86, 64-bit ARM, and 32-bit ARM v7 hosts, including common NAS and
+Raspberry Pi systems.
+
+```sh
+docker run -d --name nzbget-lite \
+  -p 6789:6789 \
+  -v nzbget-config:/config \
+  -v nzbget-downloads:/downloads \
+  ghcr.io/mergemarauder/nzbget-lite:latest
+```
+
+The same image works with Podman and Kubernetes. The process runs as numeric
+UID `65532` in group `0`, does not require Linux capabilities, and only writes
+to `/config` and `/downloads`. Kubernetes may replace the UID; ensure the two
+mounted volumes are writable by the selected security context or `fsGroup`.
+The image includes CA certificates and 7-Zip, but deliberately omits the
+proprietary `unrar` binary; mount or extend the image with one if required.
+
+On first start the container copies the default configuration into `/config`.
+Change its default API password before exposing the service. A scratch image
+is not used because TLS certificate verification, archive extraction, and a
+writable first-run configuration require runtime files beyond the executable.
 
 ## API
 
