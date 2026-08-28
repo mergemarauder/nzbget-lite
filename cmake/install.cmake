@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 set(CONF_FILE nzbget.conf)
 set(SHARE_DIR_DEST ${CMAKE_INSTALL_PREFIX}/share/${PACKAGE})
 set(DOC_FILES_SRC ${CMAKE_SOURCE_DIR}/COPYING)

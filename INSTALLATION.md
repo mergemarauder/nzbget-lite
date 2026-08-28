@@ -1,3 +1,4 @@
+<!-- Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md. -->
 # Building on Linux
 
 NZBGet Lite supports native Linux builds only. Install a C++20 compiler,

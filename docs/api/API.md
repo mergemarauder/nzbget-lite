@@ -1,3 +1,4 @@
+<!-- Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md. -->
 # RPC API
 
 This document describes the RPC methods retained by NZBGet Lite.

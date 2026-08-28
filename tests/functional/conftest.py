@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 import pytest
 import subprocess
 import os

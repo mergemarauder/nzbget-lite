@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 set(PAR2_ROOT ${CMAKE_BINARY_DIR}/par2-turbo/src)
 set(PAR2_LIBS
 	${PAR2_ROOT}/par2-turbo-build/libpar2-turbo.a

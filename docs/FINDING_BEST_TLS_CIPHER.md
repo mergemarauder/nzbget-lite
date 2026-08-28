@@ -1,3 +1,4 @@
+<!-- Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md. -->
 ## About ciphers
 
 When an encrypted communication with news server (option **ServerX.Encryption**) is active NZBGet and the news server use TLS/SSL protocol to exchange data in a secure way.

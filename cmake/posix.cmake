@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 option(ENABLE_STATIC "Build static executable")
 option(ENABLE_TESTS "Build tests")
 option(ENABLE_CLANG_TIDY "Enable Clang-Tidy static analyzer")

@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 set(SRC
 	${CMAKE_SOURCE_DIR}/daemon/connect/Connection.cpp
 	${CMAKE_SOURCE_DIR}/daemon/connect/TlsSocket.cpp

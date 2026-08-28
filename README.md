@@ -6,6 +6,10 @@ JSON-RPC/XML-RPC APIs, command-line client, and native Linux
 daemon while removing the bundled web UI, extension runtime, static-file
 server, non-Linux ports, and platform packaging infrastructure.
 
+This is a substantially modified, unofficial fork and is not endorsed by the
+upstream NZBGet project. See [MODIFICATIONS.md](MODIFICATIONS.md) for the base
+revision, modification date, and a summary of the changes.
+
 There is intentionally no browser interface. Non-RPC HTTP routes return
 `404 Not Found`.
 
@@ -78,5 +82,16 @@ network.
 
 ## License
 
-NZBGet Lite retains NZBGet's GNU General Public License v2 terms. See
-[COPYING](COPYING).
+NZBGet Lite retains NZBGet's GNU General Public License, version 2 or (at your
+option) any later version. Copyright remains with the authors identified in
+the source files and Git history. See [COPYING](COPYING) and
+[MODIFICATIONS.md](MODIFICATIONS.md). The software is provided without
+warranty, to the extent permitted by law.
+
+Component-specific copyright and licensing information is recorded in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The LGPL 2.1 text required
+by the retained GNU regex fallback is included as [COPYING.LESSER](COPYING.LESSER).
+
+The published container includes the license at
+`/usr/share/licenses/nzbget-lite/COPYING`. Its OCI metadata links to the public
+corresponding source and records the exact Git revision used to build it.

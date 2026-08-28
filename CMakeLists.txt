@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 cmake_minimum_required(VERSION 3.13)
 
 if(POLICY CMP0167)

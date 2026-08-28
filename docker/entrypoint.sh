@@ -1,4 +1,5 @@
 #!/bin/sh
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 set -eu
 
 config=/config/nzbget.conf

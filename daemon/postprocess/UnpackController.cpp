@@ -1,3 +1,4 @@
+// Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 /*
  *  This file is part of nzbget. See <https://nzbget.com>.
  *

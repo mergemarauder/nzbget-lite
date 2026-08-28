@@ -1,3 +1,4 @@
+<!-- Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md. -->
 ## Functional testing
 
 During functional testing the program is tested as a whole. This is much like if the testing were made by a human. Although the user interface parts are not tested the core of the program is tested and how the different program components work together. When functional tests succeed that means that the tested scenarios will most likely work properly when the program is run by real users. The quality of total testing obviously depends on the amount and quality of individual tests.

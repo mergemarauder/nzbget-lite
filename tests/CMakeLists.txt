@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 set(TESTS_TARGET nzbget_tests)
