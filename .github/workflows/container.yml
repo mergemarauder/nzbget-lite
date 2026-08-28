@@ -1,4 +1,6 @@
 name: Container
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Added by NZBGet Lite contributors, 2026-08-28.
 
 on:
   push:
@@ -48,6 +50,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: ${{ env.IMAGE }}:${{ github.sha }}-${{ matrix.arch }}
+          build-args: VCS_REF=${{ github.sha }}
           cache-from: type=gha,scope=container-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=container-${{ matrix.arch }}
 

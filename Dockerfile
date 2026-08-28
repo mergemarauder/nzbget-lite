@@ -1,4 +1,6 @@
 # syntax=docker/dockerfile:1.7
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Added by NZBGet Lite contributors, 2026-08-28.
 FROM alpine:3.22 AS build
 
 RUN apk add --no-cache \
@@ -14,8 +16,12 @@ RUN cmake -S . -B build \
 
 FROM alpine:3.22
 
+ARG VCS_REF="unknown"
 LABEL org.opencontainers.image.source="https://github.com/mergemarauder/nzbget-lite" \
-      org.opencontainers.image.description="Minimal Linux API-only NZBGet"
+      org.opencontainers.image.url="https://github.com/mergemarauder/nzbget-lite" \
+      org.opencontainers.image.description="Minimal Linux API-only NZBGet" \
+      org.opencontainers.image.licenses="GPL-2.0-or-later" \
+      org.opencontainers.image.revision="${VCS_REF}"
 
 RUN apk add --no-cache \
       7zip boost1.84-json ca-certificates libgcc libstdc++ libxml2 openssl zlib && \
@@ -25,6 +31,9 @@ RUN apk add --no-cache \
 
 COPY --from=build /src/build/nzbget /usr/local/bin/nzbget
 COPY --from=build /src/build/nzbget.conf /usr/share/nzbget/nzbget.conf
+COPY COPYING /usr/share/licenses/nzbget-lite/COPYING
+COPY COPYING.LESSER /usr/share/licenses/nzbget-lite/COPYING.LESSER
+COPY THIRD_PARTY_NOTICES.md /usr/share/licenses/nzbget-lite/THIRD_PARTY_NOTICES.md
 COPY --chmod=0555 docker/entrypoint.sh /usr/local/bin/container-entrypoint
 
 ENV HOME=/config

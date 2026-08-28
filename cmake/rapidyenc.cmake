@@ -1,3 +1,4 @@
+# Modified by NZBGet Lite contributors, 2026-08-28; see MODIFICATIONS.md.
 set(RAPIDYENC_ROOT ${CMAKE_BINARY_DIR}/rapidyenc/src)
 set(RAPIDYENC_LIBS
 	${RAPIDYENC_ROOT}/rapidyenc-build/rapidyenc_static/librapidyenc.a
@@ -14,7 +15,7 @@ set(CMAKE_ARGS
 	-DDISABLE_DECODE=OFF
 	-DDISABLE_CRC=OFF
 	-DDISABLE_AVX256=OFF
-	-DDISABLE_CRCUTIL=OFF
+	-DDISABLE_CRCUTIL=ON
 	-DUSE_SANITIZERS=${USE_SANITIZERS}
 )
 
