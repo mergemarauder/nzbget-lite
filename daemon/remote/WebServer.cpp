@@ -218,8 +218,7 @@ void WebProcessor::ParseHeaders()
 
 void WebProcessor::ParseUrl()
 {
-	// remove subfolder "nzbget" from the path (if exists)
-	// http://localhost:6789/nzbget/username:password/jsonrpc -> http://localhost:6789/username:password/jsonrpc
+	// Remove the optional "nzbget" path prefix.
 	if (!strncmp(m_url, "/nzbget/", 8))
 	{
 		m_url = CString(m_url + 7);
@@ -229,21 +228,6 @@ void WebProcessor::ParseUrl()
 	{
 		SendRedirectResponse(BString<1024>("%s/", *m_url));
 		return;
-	}
-
-	// authorization via URL in format:
-	// http://localhost:6789/username:password/jsonrpc
-	char* pauth1 = strchr(m_url + 1, ':');
-	char* pauth2 = strchr(m_url + 1, '/');
-	if (pauth1 && pauth1 < pauth2)
-	{
-		char* pstart = m_url + 1;
-		char* pend = pauth2;
-		int len = std::min((int)(pend - pstart), (int)sizeof(m_authInfo) - 1);
-		strncpy(m_authInfo, pstart, len);
-		m_authInfo[len] = '\0';
-		WebUtil::UrlDecode(m_authInfo);
-		m_url = CString(pend);
 	}
 
 	debug("Final URL=%s", *m_url);
