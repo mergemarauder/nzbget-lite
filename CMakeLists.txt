@@ -41,15 +41,15 @@ project(
 	LANGUAGES C CXX
 )
 
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	message(FATAL_ERROR "nzbget-lite supports Linux only")
+endif()
+
 set(EXTERNAL_DEPS "")
 include(cmake/common.cmake)
 include(daemon/sources.cmake)
 
-if(WIN32)
-	include(cmake/windows.cmake)
-else()
-	include(cmake/posix.cmake)
-endif()
+include(cmake/posix.cmake)
 
 configure_file(
 	${CMAKE_SOURCE_DIR}/cmake/config.h.in
@@ -69,41 +69,18 @@ if(NOT BUILD_ONLY_TESTS)
 
 	apply_sanitizers(${PACKAGE})
 
-	if(NOT WIN32)
-		if(CMAKE_BUILD_TYPE STREQUAL "Release")
-			add_custom_command(
-				TARGET ${PACKAGE} POST_BUILD
+	if(CMAKE_BUILD_TYPE STREQUAL "Release")
+		add_custom_command(
+			TARGET ${PACKAGE} POST_BUILD
 				DEPENDS ${PACKAGE}
 				COMMAND ${CMAKE_STRIP}
 				ARGS ${PACKAGE}
-			)
-		endif()
+		)
 	endif()
 endif()
 
-if(WIN32)
-	if(NOT BUILD_ONLY_TESTS)
-		target_sources(${PACKAGE} PRIVATE ${CMAKE_SOURCE_DIR}/windows/resources/nzbget.rc)
-		configure_file(
-			${CMAKE_SOURCE_DIR}/windows/resources/version.rc.in
-			${CMAKE_BINARY_DIR}/version.rc
-		)
-		configure_file(
-			${CMAKE_SOURCE_DIR}/windows/version.nsi.in
-			${CMAKE_BINARY_DIR}/version.nsi
-			@ONLY
-		)
-		configure_file(
-			${CMAKE_SOURCE_DIR}/windows/version-uninstall.nsi.in
-			${CMAKE_BINARY_DIR}/version-uninstall.nsi
-			@ONLY
-		)
-		target_sources(${PACKAGE} PRIVATE ${CMAKE_BINARY_DIR}/version.rc)
-	endif()
-else()
-	if(NOT BUILD_ONLY_TESTS)
-		include(${CMAKE_SOURCE_DIR}/cmake/install.cmake)
-	endif()
+if(NOT BUILD_ONLY_TESTS)
+	include(${CMAKE_SOURCE_DIR}/cmake/install.cmake)
 endif()
 
 if(ENABLE_TESTS OR BUILD_ONLY_TESTS)

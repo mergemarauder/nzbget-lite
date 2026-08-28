@@ -131,18 +131,6 @@ set(SRC
 	${CMAKE_SOURCE_DIR}/daemon/systemhealth/DisplayValidator.cpp
 )
 
-set(WIN32_SRC
-	${CMAKE_SOURCE_DIR}/daemon/windows/StdAfx.cpp
-	${CMAKE_SOURCE_DIR}/daemon/windows/WinConsole.cpp
-	${CMAKE_SOURCE_DIR}/daemon/windows/WinService.cpp
-	${CMAKE_SOURCE_DIR}/daemon/util/Utf8.cpp
-)
-
-if(WIN32)
-	set(SRC ${SRC} ${WIN32_SRC})
-	set(INCLUDES ${INCLUDES} ${CMAKE_SOURCE_DIR}/windows)
-endif()
-
 set(INCLUDES ${INCLUDES}
 	${CMAKE_SOURCE_DIR}/daemon/connect
 	${CMAKE_SOURCE_DIR}/daemon/extension
